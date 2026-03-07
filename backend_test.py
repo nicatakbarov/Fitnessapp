@@ -236,6 +236,199 @@ class FitStartBackendTester:
         self.token = original_token
         return success
 
+    # ===== PURCHASE TESTS =====
+
+    def test_create_free_starter_purchase(self):
+        """Test creating a purchase for the free starter program"""
+        if not self.token:
+            print("❌ No token available for purchase test")
+            return False
+            
+        success, response = self.run_test(
+            "Create Free Starter Purchase",
+            "POST",
+            "purchases",
+            200,
+            data={
+                "program_id": "free-starter",
+                "program_name": "Free Starter",
+                "price": 0.0
+            },
+            auth=True
+        )
+        
+        if success:
+            print(f"   ✨ Created purchase for Free Starter program")
+        return success
+
+    def test_create_duplicate_purchase(self):
+        """Test creating duplicate purchase (should fail)"""
+        if not self.token:
+            print("❌ No token available for duplicate purchase test")
+            return False
+            
+        success, response = self.run_test(
+            "Duplicate Purchase (should fail)",
+            "POST",
+            "purchases",
+            400,
+            data={
+                "program_id": "free-starter",
+                "program_name": "Free Starter",
+                "price": 0.0
+            },
+            auth=True
+        )
+        return success
+
+    def test_get_user_purchases(self):
+        """Test getting user's purchases"""
+        if not self.token:
+            print("❌ No token available for purchases list test")
+            return False
+            
+        success, response = self.run_test(
+            "Get User Purchases",
+            "GET",
+            "purchases",
+            200,
+            auth=True
+        )
+        
+        if success and response:
+            print(f"   📚 Found {len(response)} purchase(s)")
+            for purchase in response:
+                print(f"      - {purchase.get('program_name')} (${purchase.get('price')})")
+        return success
+
+    def test_get_specific_purchase(self):
+        """Test getting a specific purchase by program ID"""
+        if not self.token:
+            print("❌ No token available for specific purchase test")
+            return False
+            
+        success, response = self.run_test(
+            "Get Specific Purchase (Free Starter)",
+            "GET",
+            "purchases/free-starter",
+            200,
+            auth=True
+        )
+        return success
+
+    def test_get_nonexistent_purchase(self):
+        """Test getting a nonexistent purchase (should fail)"""
+        if not self.token:
+            print("❌ No token available for nonexistent purchase test")
+            return False
+            
+        success, response = self.run_test(
+            "Get Nonexistent Purchase (should fail)",
+            "GET",
+            "purchases/nonexistent-program",
+            404,
+            auth=True
+        )
+        return success
+
+    # ===== PROGRESS TESTS =====
+
+    def test_mark_day_1_complete(self):
+        """Test marking day 1 as complete"""
+        if not self.token:
+            print("❌ No token available for progress test")
+            return False
+            
+        success, response = self.run_test(
+            "Mark Day 1 Complete",
+            "POST",
+            "progress/free-starter/day/day-1",
+            200,
+            data={},
+            auth=True
+        )
+        
+        if success:
+            print(f"   ✅ Marked day-1 as complete")
+        return success
+
+    def test_mark_day_2_complete(self):
+        """Test marking day 2 as complete"""
+        if not self.token:
+            print("❌ No token available for progress test")
+            return False
+            
+        success, response = self.run_test(
+            "Mark Day 2 Complete",
+            "POST",
+            "progress/free-starter/day/day-2",
+            200,
+            data={},
+            auth=True
+        )
+        
+        if success:
+            print(f"   ✅ Marked day-2 as complete")
+        return success
+
+    def test_mark_day_3_complete(self):
+        """Test marking day 3 as complete"""
+        if not self.token:
+            print("❌ No token available for progress test")
+            return False
+            
+        success, response = self.run_test(
+            "Mark Day 3 Complete",
+            "POST",
+            "progress/free-starter/day/day-3",
+            200,
+            data={},
+            auth=True
+        )
+        
+        if success:
+            print(f"   ✅ Marked day-3 as complete")
+        return success
+
+    def test_get_program_progress(self):
+        """Test getting program progress"""
+        if not self.token:
+            print("❌ No token available for get progress test")
+            return False
+            
+        success, response = self.run_test(
+            "Get Program Progress",
+            "GET",
+            "progress/free-starter",
+            200,
+            auth=True
+        )
+        
+        if success and response:
+            print(f"   📊 Found progress for {len(response)} day(s)")
+            for progress in response:
+                day_id = progress.get('day_id', 'unknown')
+                completed = progress.get('completed', False)
+                completed_at = progress.get('completed_at', 'N/A')
+                print(f"      - {day_id}: {'✅' if completed else '❌'} ({completed_at})")
+        return success
+
+    def test_mark_without_purchase(self):
+        """Test marking progress without owning the program (should fail)"""
+        if not self.token:
+            print("❌ No token available for unauthorized progress test")
+            return False
+            
+        success, response = self.run_test(
+            "Mark Progress Without Purchase (should fail)",
+            "POST",
+            "progress/nonexistent-program/day/day-1",
+            403,
+            data={},
+            auth=True
+        )
+        return success
+
 def main():
     # Setup
     tester = FitStartBackendTester()
@@ -277,6 +470,41 @@ def main():
 
     # Test 9: Get /me with invalid token (should fail)
     tester.test_get_me_with_invalid_token()
+
+    # ===== PURCHASE TESTS =====
+    
+    # Test 10: Create Free Starter purchase
+    if not tester.test_create_free_starter_purchase():
+        print("❌ Free Starter purchase creation failed, continuing with other tests")
+    
+    # Test 11: Try to create duplicate purchase (should fail)
+    tester.test_create_duplicate_purchase()
+    
+    # Test 12: Get user purchases
+    tester.test_get_user_purchases()
+    
+    # Test 13: Get specific purchase
+    tester.test_get_specific_purchase()
+    
+    # Test 14: Get nonexistent purchase (should fail)
+    tester.test_get_nonexistent_purchase()
+
+    # ===== PROGRESS TESTS =====
+    
+    # Test 15: Mark day 1 complete
+    tester.test_mark_day_1_complete()
+    
+    # Test 16: Mark day 2 complete  
+    tester.test_mark_day_2_complete()
+    
+    # Test 17: Mark day 3 complete
+    tester.test_mark_day_3_complete()
+    
+    # Test 18: Get program progress
+    tester.test_get_program_progress()
+    
+    # Test 19: Try to mark progress without owning program (should fail)
+    tester.test_mark_without_purchase()
 
     # Print final results
     print("\n" + "="*60)

@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import Optional
+from typing import Optional, List
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
@@ -71,6 +71,31 @@ class TokenResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+# ===== Purchase Models =====
+
+class PurchaseCreate(BaseModel):
+    program_id: str
+    program_name: str
+    price: float
+
+class PurchaseResponse(BaseModel):
+    id: str
+    user_id: str
+    program_id: str
+    program_name: str
+    price: float
+    status: str
+    purchased_at: str
+
+class ProgressUpdate(BaseModel):
+    completed: bool
+
+class ProgressResponse(BaseModel):
+    program_id: str
+    day_id: str
+    completed: bool
+    completed_at: Optional[str] = None
 
 # ===== Helper Functions =====
 
@@ -199,6 +224,93 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         email=current_user["email"],
         created_at=current_user["created_at"]
     )
+
+# ===== Purchase Endpoints =====
+
+@api_router.post("/purchases", response_model=PurchaseResponse)
+async def create_purchase(purchase_data: PurchaseCreate, current_user: dict = Depends(get_current_user)):
+    # Check if user already has this program
+    existing = await db.purchases.find_one({
+        "user_id": current_user["id"],
+        "program_id": purchase_data.program_id
+    })
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You already own this program"
+        )
+    
+    purchase_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    purchase_doc = {
+        "id": purchase_id,
+        "user_id": current_user["id"],
+        "program_id": purchase_data.program_id,
+        "program_name": purchase_data.program_name,
+        "price": purchase_data.price,
+        "status": "active",
+        "purchased_at": now
+    }
+    
+    await db.purchases.insert_one(purchase_doc)
+    
+    return PurchaseResponse(**purchase_doc)
+
+@api_router.get("/purchases", response_model=List[PurchaseResponse])
+async def get_purchases(current_user: dict = Depends(get_current_user)):
+    purchases = await db.purchases.find(
+        {"user_id": current_user["id"]},
+        {"_id": 0}
+    ).to_list(100)
+    return [PurchaseResponse(**p) for p in purchases]
+
+@api_router.get("/purchases/{program_id}")
+async def get_purchase(program_id: str, current_user: dict = Depends(get_current_user)):
+    purchase = await db.purchases.find_one(
+        {"user_id": current_user["id"], "program_id": program_id},
+        {"_id": 0}
+    )
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    return PurchaseResponse(**purchase)
+
+# ===== Progress Endpoints =====
+
+@api_router.post("/progress/{program_id}/day/{day_id}")
+async def mark_day_complete(program_id: str, day_id: str, current_user: dict = Depends(get_current_user)):
+    # Verify user owns this program
+    purchase = await db.purchases.find_one({
+        "user_id": current_user["id"],
+        "program_id": program_id
+    })
+    if not purchase:
+        raise HTTPException(status_code=403, detail="You don't own this program")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Upsert progress
+    await db.progress.update_one(
+        {"user_id": current_user["id"], "program_id": program_id, "day_id": day_id},
+        {"$set": {
+            "user_id": current_user["id"],
+            "program_id": program_id,
+            "day_id": day_id,
+            "completed": True,
+            "completed_at": now
+        }},
+        upsert=True
+    )
+    
+    return {"message": "Day marked complete", "day_id": day_id, "completed_at": now}
+
+@api_router.get("/progress/{program_id}")
+async def get_program_progress(program_id: str, current_user: dict = Depends(get_current_user)):
+    progress = await db.progress.find(
+        {"user_id": current_user["id"], "program_id": program_id},
+        {"_id": 0}
+    ).to_list(100)
+    return progress
 
 # ===== Root Endpoint =====
 
