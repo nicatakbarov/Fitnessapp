@@ -1,0 +1,120 @@
+{
+  "brand_identity": {
+    "name": "FitStart",
+    "tone": "High-Performance, Motivational, Clean, Professional",
+    "archetype": "The Performance Pro",
+    "theme_mode": "dark"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Oswald, sans-serif",
+      "body": "Inter, sans-serif"
+    },
+    "scale": {
+      "h1": "text-5xl md:text-7xl font-bold tracking-tight uppercase",
+      "h2": "text-3xl md:text-5xl font-bold tracking-tight uppercase",
+      "h3": "text-2xl md:text-3xl font-semibold",
+      "body": "text-base md:text-lg leading-relaxed text-zinc-400",
+      "small": "text-sm font-medium tracking-wide uppercase text-zinc-500"
+    },
+    "imports": [
+      "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;700&display=swap');"
+    ]
+  },
+  "colors": {
+    "palette": {
+      "background": "#0f0f0f",
+      "foreground": "#fafafa",
+      "primary": "#22c55e",
+      "primary_hover": "#16a34a",
+      "secondary": "#27272a",
+      "accent": "#22c55e",
+      "muted": "#a1a1aa",
+      "border": "#27272a",
+      "card": "#18181b"
+    },
+    "utility_classes": {
+      "bg_main": "bg-[#0f0f0f]",
+      "text_main": "text-zinc-50",
+      "text_muted": "text-zinc-400",
+      "border_subtle": "border-zinc-800",
+      "primary_gradient": "bg-gradient-to-r from-green-500 to-emerald-600"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-black/40 border border-white/10",
+    "gradients": {
+      "hero_overlay": "bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/80 to-transparent",
+      "card_glow": "hover:shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]"
+    },
+    "borders": "border border-zinc-800",
+    "shadows": "shadow-xl shadow-black/50"
+  },
+  "components": {
+    "Navbar": {
+      "style": "fixed top-0 w-full z-50 transition-all duration-300",
+      "variant": "glassmorphism",
+      "height": "h-20"
+    },
+    "Hero": {
+      "layout": "full-screen-height relative flex items-center justify-center",
+      "text_align": "center",
+      "overlay": "absolute inset-0 bg-black/60 z-10"
+    },
+    "Buttons": {
+      "primary": "bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full transition-all hover:scale-105 active:scale-95 shadow-lg shadow-green-900/20",
+      "secondary": "bg-transparent border border-zinc-700 text-white hover:bg-zinc-800 hover:border-zinc-600 py-3 px-6 rounded-full transition-all",
+      "ghost": "text-zinc-400 hover:text-white transition-colors"
+    },
+    "Cards": {
+      "base": "bg-zinc-900/50 border border-zinc-800 p-8 rounded-2xl hover:border-green-500/50 transition-colors duration-300 group relative overflow-hidden",
+      "pricing": "flex flex-col h-full bg-zinc-900 border border-zinc-800 p-8 rounded-3xl hover:border-green-500 transition-all hover:-translate-y-2",
+      "testimonial": "bg-zinc-900/30 border border-zinc-800/50 p-6 rounded-xl backdrop-blur-sm"
+    },
+    "Inputs": {
+      "style": "bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-green-500 focus:ring-green-500/20 h-12 rounded-lg"
+    }
+  },
+  "layout_strategies": {
+    "container": "max-w-7xl mx-auto px-6 md:px-12",
+    "section_spacing": "py-24 md:py-32",
+    "grid_hero": "grid grid-cols-1 md:grid-cols-12 gap-8 items-center",
+    "grid_bento": "grid grid-cols-1 md:grid-cols-3 gap-6"
+  },
+  "motion": {
+    "type": "subtle",
+    "transitions": "transition-all duration-300 ease-out",
+    "hover_effects": "hover:scale-[1.02] hover:shadow-lg",
+    "entrance": "opacity-0 translate-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards"
+  },
+  "assets": {
+    "images": {
+      "hero_bg": "https://images.unsplash.com/photo-1634042341465-f08e0d10a670?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "programs_bg": "https://images.unsplash.com/photo-1722925541321-f52d45b29c17?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "testimonials": [
+        "https://images.unsplash.com/photo-1589860518300-9eac95f784d9?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "https://images.unsplash.com/photo-1683194381604-b0f7ee52584a?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "https://images.unsplash.com/photo-1700784795176-7ff886439d79?crop=entropy&cs=srgb&fm=jpg&q=85"
+      ]
+    },
+    "icons": "lucide-react"
+  },
+  "instructions_to_main_agent": [
+    "1. UPDATE TAILWIND CONFIG: Extend the theme with colors: { background: '#0f0f0f', primary: '#22c55e' }. Add 'Oswald' to fontFamily.",
+    "2. INDEX.CSS: Add the @import for fonts at the top. Set body background to #0f0f0f and text to #fafafa.",
+    "3. LANDING PAGE: Use a 'Hero' component with the hero_bg image as a background with a heavy dark overlay (opacity 70-80%). Center the text.",
+    "4. PRICING: Create 3 cards ($19, $39, $59). Highlight the $39 card with a green border or glow.",
+    "5. AUTH: Keep register/login pages simple. Centered card on a dark background. Use the specified Input styles.",
+    "6. ICONS: Use Lucide-React icons (Dumbbell, Users, Trophy, Check, etc.) with text-green-500 class.",
+    "7. TESTIMONIALS: Use the provided testimonial images as avatars in the cards.",
+    "8. ACCESSIBILITY: Ensure all green text on dark backgrounds meets contrast ratios. If #22c55e is too light for text, use a slightly lighter shade or white text with green icons.",
+    "9. DATA-TESTID: Add data-testid to all interactive elements (buttons, inputs, links)."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for backgrounds, use solid dark colors or subtle noise textures.",
+    "Ensure all interactive elements have hover states.",
+    "Use generous padding (py-24) between sections.",
+    "Never use pure black (#000000), use #0f0f0f or #18181b.",
+    "Use 'text-balance' for headlines to prevent orphans."
+  ]
+}
