@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, PROGRAMS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, PROGRAMS } from '../data/programs';
 
 const ProgramDetailPage = () => {
   const navigate = useNavigate();
@@ -56,7 +56,13 @@ const ProgramDetailPage = () => {
 
   // Get program data
   const program = PROGRAMS.find(p => p.id === id);
-  const workoutData = id === 'free-starter' ? FREE_STARTER_WORKOUTS : null;
+  const WORKOUT_MAP = {
+    'free-starter': FREE_STARTER_WORKOUTS,
+    'starter': STARTER_WORKOUTS,
+    'transformer': TRANSFORMER_WORKOUTS,
+    'elite-beginner': ELITE_WORKOUTS,
+  };
+  const workoutData = WORKOUT_MAP[id] || null;
 
   if (!user) {
     return null;
