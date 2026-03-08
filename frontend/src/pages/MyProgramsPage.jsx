@@ -4,7 +4,7 @@ import { Dumbbell, LogOut, User, Play, ShoppingBag, ArrowRight, CheckCircle2, Ci
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS } from '../data/programs';
 
 const MyProgramsPage = () => {
   const navigate = useNavigate();
@@ -61,12 +61,20 @@ const MyProgramsPage = () => {
     navigate('/');
   };
 
-  const getProgramTotalDays = (programId) => {
-    if (programId === 'free-starter') {
-      return FREE_STARTER_WORKOUTS.weeks[0].days.length;
-    }
-    return 0;
+  const WORKOUT_MAP = {
+    'free-starter': FREE_STARTER_WORKOUTS,
+    'starter': STARTER_WORKOUTS,
+    'transformer': TRANSFORMER_WORKOUTS,
+    'elite-beginner': ELITE_WORKOUTS,
   };
+
+  const getAllDays = (programId) => {
+    const data = WORKOUT_MAP[programId];
+    if (!data) return [];
+    return data.weeks.flatMap(w => w.days);
+  };
+
+  const getProgramTotalDays = (programId) => getAllDays(programId).length;
 
   const getCompletedDays = (programId) => {
     const prog = progress[programId] || [];
@@ -80,12 +88,7 @@ const MyProgramsPage = () => {
     return Math.round((completed / total) * 100);
   };
 
-  const getProgramDays = (programId) => {
-    if (programId === 'free-starter') {
-      return FREE_STARTER_WORKOUTS.weeks[0].days;
-    }
-    return [];
-  };
+  const getProgramDays = (programId) => getAllDays(programId);
 
   const isDayCompleted = (programId, dayId) => {
     const prog = progress[programId] || [];

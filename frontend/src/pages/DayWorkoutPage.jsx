@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS } from '../data/programs';
 
 const DayWorkoutPage = () => {
   const navigate = useNavigate();
@@ -79,9 +79,16 @@ const DayWorkoutPage = () => {
   };
 
   // Get workout data
-  const workoutData = id === 'free-starter' ? FREE_STARTER_WORKOUTS : null;
-  const dayData = workoutData?.weeks[0]?.days.find(d => d.id === dayId);
-  
+  const WORKOUT_MAP = {
+    'free-starter': FREE_STARTER_WORKOUTS,
+    'starter': STARTER_WORKOUTS,
+    'transformer': TRANSFORMER_WORKOUTS,
+    'elite-beginner': ELITE_WORKOUTS,
+  };
+  const workoutData = WORKOUT_MAP[id] || null;
+  const allDays = workoutData?.weeks.flatMap(w => w.days) || [];
+  const dayData = allDays.find(d => d.id === dayId);
+
   // Calculate if all exercises are checked
   const totalExercises = dayData
     ? (dayData.warmup.exercises.length + dayData.mainWorkout.length + dayData.cooldown.exercises.length)
@@ -90,7 +97,7 @@ const DayWorkoutPage = () => {
   const allExercisesDone = checkedCount >= totalExercises;
 
   // Calculate remaining days
-  const totalDays = workoutData?.weeks[0]?.days.length || 0;
+  const totalDays = allDays.length;
   const completedDays = progress.filter(p => p.completed).length + (isCompleted && !progress.some(p => p.day_id === dayId) ? 1 : 0);
   const remainingDays = totalDays - completedDays;
 
