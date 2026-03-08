@@ -3,9 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, Check, Zap, Star, Gift } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { PROGRAMS } from '../data/programs';
-import axios from 'axios';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { supabase } from '../lib/supabase';
 
 const BrowseProgramsPage = () => {
   const navigate = useNavigate();
@@ -14,28 +12,29 @@ const BrowseProgramsPage = () => {
   const [ownedPrograms, setOwnedPrograms] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
+
+    if (!userData) {
       navigate('/login');
       return;
     }
-    
+
     try {
-      setUser(JSON.parse(userData));
-      fetchPurchases(token);
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      fetchPurchases(parsedUser.id);
     } catch {
       navigate('/login');
     }
   }, [navigate]);
 
-  const fetchPurchases = async (token) => {
+  const fetchPurchases = async (userId) => {
     try {
-      const response = await axios.get(`${API}/purchases`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setOwnedPrograms(response.data.map(p => p.program_id));
+      const { data } = await supabase
+        .from('purchases')
+        .select('*')
+        .eq('user_id', userId);
+      setOwnedPrograms((data || []).map(p => p.program_id));
     } catch (err) {
       console.error('Failed to fetch purchases:', err);
     }
@@ -56,17 +55,17 @@ const BrowseProgramsPage = () => {
     if (program.isFree) {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        await axios.post(`${API}/purchases`, {
+        const userData = JSON.parse(localStorage.getItem('user'));
+        const { error } = await supabase.from('purchases').insert({
+          user_id: userData.id,
           program_id: program.id,
           program_name: program.name,
-          price: 0
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
+          price: 0,
         });
+        if (error) throw error;
         navigate('/my-programs');
       } catch (err) {
-        alert(err.response?.data?.detail || 'Failed to get program');
+        alert('Failed to get program');
       } finally {
         setLoading(false);
       }
@@ -82,7 +81,7 @@ const BrowseProgramsPage = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>

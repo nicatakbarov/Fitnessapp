@@ -7,10 +7,8 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
-import axios from 'axios';
+import { supabase } from '../lib/supabase';
 import { FREE_STARTER_WORKOUTS, PROGRAMS } from '../data/programs';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -20,39 +18,38 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
+
+    if (!userData) {
       navigate('/login');
       return;
     }
-    
+
     try {
-      setUser(JSON.parse(userData));
-      fetchData(token);
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      fetchData(parsedUser.id);
     } catch {
       navigate('/login');
     }
   }, [navigate]);
 
-  const fetchData = async (token) => {
+  const fetchData = async (userId) => {
     try {
-      const purchasesRes = await axios.get(`${API}/purchases`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPurchases(purchasesRes.data);
+      const { data: purchasesData } = await supabase
+        .from('purchases')
+        .select('*')
+        .eq('user_id', userId);
+      setPurchases(purchasesData || []);
 
       const progressData = {};
-      for (const purchase of purchasesRes.data) {
-        try {
-          const progressRes = await axios.get(`${API}/progress/${purchase.program_id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          progressData[purchase.program_id] = progressRes.data;
-        } catch {
-          progressData[purchase.program_id] = [];
-        }
+      for (const purchase of (purchasesData || [])) {
+        const { data: prog } = await supabase
+          .from('progress')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('program_id', purchase.program_id);
+        progressData[purchase.program_id] = prog || [];
       }
       setProgress(progressData);
     } catch (err) {
@@ -70,7 +67,7 @@ const DashboardPage = () => {
 
   // Get active program (Free Starter for now)
   const activeProgram = purchases.find(p => p.program_id === 'free-starter');
-  const programProgress = progress['free-starter'] || [];
+  const programProgress = useMemo(() => progress['free-starter'] || [], [progress]);
   const workoutData = FREE_STARTER_WORKOUTS;
 
   // Calculate stats
@@ -483,7 +480,7 @@ const DashboardNav = ({ user, onLogout, activePage }) => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
+        <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
           <Dumbbell className="w-8 h-8 text-green-500" />
           <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
         </Link>
@@ -530,11 +527,11 @@ const StatCard = ({ icon, value, sublabel, label, showRing, ringPercent, testId 
     data-testid={testId}
   >
     <div className="mb-2">{icon}</div>
-    <div className="relative">
+    <div className={`relative flex items-center justify-center ${showRing ? 'w-16 h-16' : ''}`}>
       {showRing && (
-        <svg className="absolute -inset-2 w-16 h-16" viewBox="0 0 36 36">
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
           <circle cx="18" cy="18" r="15" fill="none" stroke="#27272a" strokeWidth="3" />
-          <circle 
+          <circle
             cx="18" cy="18" r="15" fill="none" stroke="#22c55e" strokeWidth="3"
             strokeDasharray={`${ringPercent} 100`}
             strokeLinecap="round"
@@ -542,8 +539,8 @@ const StatCard = ({ icon, value, sublabel, label, showRing, ringPercent, testId 
           />
         </svg>
       )}
-      <span className="font-heading text-2xl font-bold text-white">{value}</span>
-      {sublabel && <span className="text-zinc-500 text-sm ml-1">{sublabel}</span>}
+      <span className={`font-heading font-bold text-white relative z-10 ${showRing ? 'text-base' : 'text-2xl'}`}>{value}</span>
+      {sublabel && <span className="text-zinc-500 text-sm ml-1 relative z-10">{sublabel}</span>}
     </div>
     <span className="text-zinc-500 text-xs mt-1">{label}</span>
   </div>

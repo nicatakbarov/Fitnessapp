@@ -4,9 +4,7 @@ import { Dumbbell, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import axios from 'axios';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { supabase } from '../lib/supabase';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -29,12 +27,20 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const response = await axios.post(`${API}/auth/login`, formData);
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+      if (signInError) throw signInError;
+      const name = data.user.user_metadata?.name || data.user.email;
+      localStorage.setItem('user', JSON.stringify({
+        id: data.user.id,
+        name,
+        email: data.user.email,
+      }));
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

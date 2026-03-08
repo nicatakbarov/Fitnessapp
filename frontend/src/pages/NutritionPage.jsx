@@ -8,10 +8,9 @@ const NutritionPage = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
+
+    if (!userData) {
       navigate('/login');
       return;
     }
@@ -91,7 +90,7 @@ const NutritionPage = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>

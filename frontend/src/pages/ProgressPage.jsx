@@ -2,10 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import axios from 'axios';
+import { supabase } from '../lib/supabase';
 import { FREE_STARTER_WORKOUTS } from '../data/programs';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const ProgressPage = () => {
   const navigate = useNavigate();
@@ -14,28 +12,30 @@ const ProgressPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
+
+    if (!userData) {
       navigate('/login');
       return;
     }
-    
+
     try {
-      setUser(JSON.parse(userData));
-      fetchProgress(token);
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      fetchProgress(parsedUser.id);
     } catch {
       navigate('/login');
     }
   }, [navigate]);
 
-  const fetchProgress = async (token) => {
+  const fetchProgress = async (userId) => {
     try {
-      const res = await axios.get(`${API}/progress/free-starter`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setProgress(res.data);
+      const { data } = await supabase
+        .from('progress')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('program_id', 'free-starter');
+      setProgress(data || []);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
     } finally {
@@ -144,7 +144,7 @@ const ProgressPage = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>

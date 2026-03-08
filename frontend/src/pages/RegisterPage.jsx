@@ -4,9 +4,7 @@ import { Dumbbell, Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import axios from 'axios';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { supabase } from '../lib/supabase';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -44,12 +42,27 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      const response = await axios.post(`${API}/auth/register`, formData);
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: { name: formData.name }
+        }
+      });
+      if (signUpError) throw signUpError;
+      localStorage.setItem('user', JSON.stringify({
+        id: data.user.id,
+        name: formData.name,
+        email: formData.email,
+      }));
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      const msg = err.message || '';
+      if (msg.includes('body stream already read') || msg.includes('fetch')) {
+        setError('Connection error. Please reload the page and try again.');
+      } else {
+        setError(msg || 'Registration failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

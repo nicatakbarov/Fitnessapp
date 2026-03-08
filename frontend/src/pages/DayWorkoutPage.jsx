@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import axios from 'axios';
+import { supabase } from '../lib/supabase';
 import { FREE_STARTER_WORKOUTS } from '../data/programs';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const DayWorkoutPage = () => {
   const navigate = useNavigate();
@@ -15,36 +13,43 @@ const DayWorkoutPage = () => {
   const [showCongrats, setShowCongrats] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState([]);
+  const [checked, setChecked] = useState({});
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
-      navigate('/login');
-      return;
-    }
-    
-    try {
-      setUser(JSON.parse(userData));
-      fetchProgress(token);
-    } catch {
-      navigate('/login');
-    }
-  }, [navigate, id]);
+  const toggleExercise = (key) => {
+    setChecked(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
-  const fetchProgress = async (token) => {
+  const fetchProgress = useCallback(async (userId) => {
     try {
-      const res = await axios.get(`${API}/progress/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setProgress(res.data);
-      const completed = res.data.some(p => p.day_id === dayId && p.completed);
+      const { data } = await supabase
+        .from('progress')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('program_id', id);
+      setProgress(data || []);
+      const completed = (data || []).some(p => p.day_id === dayId && p.completed);
       setIsCompleted(completed);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
     }
-  };
+  }, [id, dayId]);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+
+    if (!userData) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      fetchProgress(parsedUser.id);
+    } catch {
+      navigate('/login');
+    }
+  }, [navigate, id, fetchProgress]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -55,15 +60,17 @@ const DayWorkoutPage = () => {
   const handleMarkComplete = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API}/progress/${id}/day/${dayId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const userData = JSON.parse(localStorage.getItem('user'));
+      await supabase.from('progress').upsert({
+        user_id: userData.id,
+        program_id: id,
+        day_id: dayId,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,program_id,day_id' });
       setIsCompleted(true);
       setShowCongrats(true);
-      
-      // Fetch updated progress
-      await fetchProgress(token);
+      await fetchProgress(userData.id);
     } catch (err) {
       alert('Failed to mark as complete');
     } finally {
@@ -75,6 +82,13 @@ const DayWorkoutPage = () => {
   const workoutData = id === 'free-starter' ? FREE_STARTER_WORKOUTS : null;
   const dayData = workoutData?.weeks[0]?.days.find(d => d.id === dayId);
   
+  // Calculate if all exercises are checked
+  const totalExercises = dayData
+    ? (dayData.warmup.exercises.length + dayData.mainWorkout.length + dayData.cooldown.exercises.length)
+    : 0;
+  const checkedCount = Object.values(checked).filter(Boolean).length;
+  const allExercisesDone = checkedCount >= totalExercises;
+
   // Calculate remaining days
   const totalDays = workoutData?.weeks[0]?.days.length || 0;
   const completedDays = progress.filter(p => p.completed).length + (isCompleted && !progress.some(p => p.day_id === dayId) ? 1 : 0);
@@ -140,7 +154,7 @@ const DayWorkoutPage = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-40 glass py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
@@ -206,20 +220,38 @@ const DayWorkoutPage = () => {
               </div>
             </div>
             <div className="space-y-3">
-              {dayData.warmup.exercises.map((exercise, index) => (
-                <div 
-                  key={index}
-                  className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4"
-                >
-                  <p className="font-medium text-white">{exercise.name}</p>
-                  <p className="text-sm text-zinc-400">
-                    {exercise.sets && exercise.reps 
-                      ? `${exercise.sets} sets × ${exercise.reps} reps`
-                      : exercise.duration || exercise.reps
-                    }
-                  </p>
-                </div>
-              ))}
+              {dayData.warmup.exercises.map((exercise, index) => {
+                const key = `warmup-${index}`;
+                const done = !!checked[key];
+                return (
+                  <div
+                    key={index}
+                    onClick={() => toggleExercise(key)}
+                    className={`flex items-center gap-4 rounded-xl p-4 cursor-pointer transition-all select-none ${
+                      done
+                        ? 'bg-green-500/10 border border-green-500/30'
+                        : 'bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+                      done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                    }`}>
+                      {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                        {exercise.name}
+                      </p>
+                      <p className="text-sm text-zinc-400">
+                        {exercise.sets && exercise.reps
+                          ? `${exercise.sets} sets × ${exercise.reps} reps`
+                          : exercise.duration || exercise.reps
+                        }
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
@@ -232,32 +264,50 @@ const DayWorkoutPage = () => {
               <h2 className="font-heading text-lg font-bold text-white uppercase">Main Workout</h2>
             </div>
             <div className="space-y-4">
-              {dayData.mainWorkout.map((exercise, index) => (
-                <div 
-                  key={index}
-                  data-testid={`exercise-card-${index}`}
-                  className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-700 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-white text-lg">{exercise.name}</h3>
-                    <div className="flex items-center gap-1 text-zinc-500 text-sm">
-                      <Clock className="w-4 h-4" />
-                      <span>Rest {exercise.rest}</span>
+              {dayData.mainWorkout.map((exercise, index) => {
+                const key = `main-${index}`;
+                const done = !!checked[key];
+                return (
+                  <div
+                    key={index}
+                    data-testid={`exercise-card-${index}`}
+                    onClick={() => toggleExercise(key)}
+                    className={`rounded-xl p-5 cursor-pointer select-none transition-all ${
+                      done
+                        ? 'bg-green-500/10 border border-green-500/30'
+                        : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+                          done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                        }`}>
+                          {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                        </div>
+                        <h3 className={`font-semibold text-lg transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                          {exercise.name}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-1 text-zinc-500 text-sm">
+                        <Clock className="w-4 h-4" />
+                        <span>Rest {exercise.rest}</span>
+                      </div>
                     </div>
+                    <p className={`font-medium mb-2 ml-9 ${done ? 'text-zinc-600' : 'text-green-400'}`}>
+                      {exercise.sets} sets × {exercise.reps} {typeof exercise.reps === 'number' ? 'reps' : ''}
+                    </p>
+                    {exercise.tip && (
+                      <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-blue-300">
+                          <span className="font-medium">Beginner tip:</span> {exercise.tip}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-green-400 font-medium mb-2">
-                    {exercise.sets} sets × {exercise.reps} {typeof exercise.reps === 'number' ? 'reps' : ''}
-                  </p>
-                  {exercise.tip && (
-                    <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                      <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-blue-300">
-                        <span className="font-medium">Beginner tip:</span> {exercise.tip}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
@@ -273,15 +323,33 @@ const DayWorkoutPage = () => {
               </div>
             </div>
             <div className="space-y-3">
-              {dayData.cooldown.exercises.map((exercise, index) => (
-                <div 
-                  key={index}
-                  className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4"
-                >
-                  <p className="font-medium text-white">{exercise.name}</p>
-                  <p className="text-sm text-zinc-400">{exercise.duration}</p>
-                </div>
-              ))}
+              {dayData.cooldown.exercises.map((exercise, index) => {
+                const key = `cooldown-${index}`;
+                const done = !!checked[key];
+                return (
+                  <div
+                    key={index}
+                    onClick={() => toggleExercise(key)}
+                    className={`flex items-center gap-4 rounded-xl p-4 cursor-pointer transition-all select-none ${
+                      done
+                        ? 'bg-green-500/10 border border-green-500/30'
+                        : 'bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+                      done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                    }`}>
+                      {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                        {exercise.name}
+                      </p>
+                      <p className="text-sm text-zinc-400">{exercise.duration}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>
@@ -290,13 +358,20 @@ const DayWorkoutPage = () => {
       {/* Fixed Bottom Button */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f] to-transparent">
         <div className="max-w-3xl mx-auto">
+          {!isCompleted && !allExercisesDone && (
+            <p className="text-center text-zinc-500 text-sm mb-3">
+              {totalExercises - checkedCount} exercise{totalExercises - checkedCount !== 1 ? 's' : ''} remaining
+            </p>
+          )}
           <Button
             onClick={handleMarkComplete}
-            disabled={loading || isCompleted}
+            disabled={loading || isCompleted || !allExercisesDone}
             data-testid="mark-complete-btn"
             className={`w-full py-6 rounded-full font-bold text-lg transition-all ${
               isCompleted
                 ? 'bg-zinc-800 text-zinc-400 cursor-not-allowed'
+                : !allExercisesDone
+                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-700 text-white hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >

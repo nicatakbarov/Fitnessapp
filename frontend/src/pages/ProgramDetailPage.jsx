@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import axios from 'axios';
+import { supabase } from '../lib/supabase';
 import { FREE_STARTER_WORKOUTS, PROGRAMS } from '../data/programs';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const ProgramDetailPage = () => {
   const navigate = useNavigate();
@@ -14,35 +12,37 @@ const ProgramDetailPage = () => {
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
-      navigate('/login');
-      return;
-    }
-    
+  const fetchProgress = useCallback(async (userId) => {
     try {
-      setUser(JSON.parse(userData));
-      fetchProgress(token);
-    } catch {
-      navigate('/login');
-    }
-  }, [navigate, id]);
-
-  const fetchProgress = async (token) => {
-    try {
-      const res = await axios.get(`${API}/progress/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setProgress(res.data);
+      const { data } = await supabase
+        .from('progress')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('program_id', id);
+      setProgress(data || []);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+
+    if (!userData) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      fetchProgress(parsedUser.id);
+    } catch {
+      navigate('/login');
+    }
+  }, [navigate, id, fetchProgress]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -80,7 +80,7 @@ const ProgramDetailPage = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
+          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
