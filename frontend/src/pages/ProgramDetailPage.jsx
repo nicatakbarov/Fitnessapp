@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle, LayoutDashboard } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
 import { getProgramContent, PROGRAMS } from '../data/programs';
@@ -11,6 +11,7 @@ const ProgramDetailPage = () => {
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedWeeks, setExpandedWeeks] = useState({ 1: true });
 
   const fetchProgress = useCallback(async (userId) => {
     try {
@@ -150,13 +151,22 @@ const ProgramDetailPage = () => {
               <p className="text-zinc-400">Loading workouts...</p>
             </div>
           ) : workoutData ? (
-            <div className="space-y-8">
-              {workoutData.weeks.map((week) => (
-                <div key={week.week}>
-                  <h2 className="font-heading text-xl font-bold text-white uppercase mb-4">
-                    Week {week.week}
-                  </h2>
-                  <div className="space-y-4">
+            <div className="space-y-4">
+              {workoutData.weeks.map((week) => {
+                const isOpen = !!expandedWeeks[week.week];
+                return (
+                <div key={week.week} className="border border-zinc-800 rounded-xl overflow-hidden">
+                  <button
+                    className="w-full flex items-center justify-between px-6 py-4 bg-zinc-900 hover:bg-zinc-800 transition-colors"
+                    onClick={() => setExpandedWeeks(prev => ({ ...prev, [week.week]: !prev[week.week] }))}
+                  >
+                    <h2 className="font-heading text-xl font-bold text-white uppercase">
+                      Week {week.week}
+                    </h2>
+                    <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isOpen && (
+                  <div className="p-4 space-y-4">
                     {week.days.map((day) => {
                       const completed = isDayCompleted(day.id);
                       return (
@@ -198,8 +208,10 @@ const ProgramDetailPage = () => {
                       );
                     })}
                   </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12 bg-zinc-900/50 rounded-2xl border border-zinc-800">
