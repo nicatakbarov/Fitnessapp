@@ -1,6 +1,58 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper, PlayCircle, ChevronDown } from 'lucide-react';
+
+const BASE_IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
+
+// Map exercise names to free-exercise-db IDs
+const EXERCISE_DEMO = {
+  'Push-Up': 'Push-Up',
+  'Push-Ups': 'Push-Up',
+  'Wide Push-Up': 'Wide-Grip_Barbell_Bench_Press',
+  'Squat': 'Barbell_Full_Squat',
+  'Bodyweight Squat': 'Bodyweight_Squat',
+  'Goblet Squat (DB)': 'Dumbbell_Goblet_Squat',
+  'Bench Press': 'Barbell_Bench_Press_-_Medium_Grip',
+  'Lat Pulldown': 'Pulldown',
+  'Plank Hold': 'Plank',
+  'Plank': 'Plank',
+  'Glute Bridge': 'Glute_Ham_Raise',
+  'Lunge': 'Dumbbell_Lunge',
+  'Dumbbell Lunge': 'Dumbbell_Lunge',
+  'Dumbbell Row': 'Bent_Over_Two-Dumbbell_Row',
+  'DB Row': 'Bent_Over_Two-Dumbbell_Row',
+  'Shoulder Press': 'Dumbbell_Shoulder_Press',
+  'DB Shoulder Press': 'Dumbbell_Shoulder_Press',
+  'Bicep Curl': 'Dumbbell_Bicep_Curl',
+  'DB Bicep Curl': 'Dumbbell_Bicep_Curl',
+  'Tricep Dip': 'Triceps_Dip',
+  'Dips': 'Triceps_Dip',
+  'Burpee': 'Burpees',
+  'Burpees': 'Burpees',
+  'Mountain Climber': 'Mountain_Climber',
+  'Mountain Climbers': 'Mountain_Climber',
+  'Jumping Jack': 'Jumping_Jacks',
+  'Jumping Jacks': 'Jumping_Jacks',
+  'Deadlift': 'Barbell_Deadlift',
+  'Romanian Deadlift': 'Romanian_Deadlift_with_Dumbbells',
+  'Hip Thrust': 'Barbell_Hip_Thrust',
+  'Calf Raise': 'Standing_Dumbbell_Calf_Raise',
+  'Sit-Up': '3_4_Sit-Up',
+  'Crunch': 'Crunch',
+  'Leg Raise': 'Hanging_Leg_Raise',
+  'Pull-Up': 'Pull-Up',
+  'Pull-Ups': 'Pull-Up',
+  'Chin-Up': 'Chin-Up',
+  'Pike Push-Up': 'Pike_Push-up',
+  'Diamond Push-Up': 'Diamond_Push-Up',
+};
+
+const getDemoImages = (name) => {
+  const key = Object.keys(EXERCISE_DEMO).find(k => name.toLowerCase().includes(k.toLowerCase()));
+  if (!key) return null;
+  const id = EXERCISE_DEMO[key];
+  return [`${BASE_IMG}/${id}/0.jpg`, `${BASE_IMG}/${id}/1.jpg`];
+};
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
 import { getProgramContent } from '../data/programs';
@@ -14,6 +66,7 @@ const DayWorkoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState([]);
   const [checked, setChecked] = useState({});
+  const [showDemo, setShowDemo] = useState({});
 
   const toggleExercise = (key) => {
     setChecked(prev => ({ ...prev, [key]: !prev[key] }));
@@ -272,40 +325,73 @@ const DayWorkoutPage = () => {
               {dayData.mainWorkout.map((exercise, index) => {
                 const key = `main-${index}`;
                 const done = !!checked[key];
+                const demoImgs = getDemoImages(exercise.name);
+                const demoOpen = !!showDemo[key];
                 return (
                   <div
                     key={index}
                     data-testid={`exercise-card-${index}`}
-                    onClick={() => toggleExercise(key)}
-                    className={`rounded-xl p-5 cursor-pointer select-none transition-all ${done
+                    className={`rounded-xl overflow-hidden transition-all ${done
                         ? 'bg-green-500/10 border border-green-500/30'
                         : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
                       }`}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
-                          }`}>
-                          {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                    <div
+                      className="p-5 cursor-pointer select-none"
+                      onClick={() => toggleExercise(key)}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                            }`}>
+                            {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                          </div>
+                          <h3 className={`font-semibold text-lg transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                            {exercise.name}
+                          </h3>
                         </div>
-                        <h3 className={`font-semibold text-lg transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
-                          {exercise.name}
-                        </h3>
+                        <div className="flex items-center gap-1 text-zinc-500 text-sm">
+                          <Clock className="w-4 h-4" />
+                          <span>Rest {exercise.rest}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-zinc-500 text-sm">
-                        <Clock className="w-4 h-4" />
-                        <span>Rest {exercise.rest}</span>
-                      </div>
+                      <p className={`font-medium mb-2 ml-9 ${done ? 'text-zinc-600' : 'text-green-400'}`}>
+                        {exercise.sets} sets × {exercise.reps} {typeof exercise.reps === 'number' ? 'reps' : ''}
+                      </p>
+                      {exercise.tip && (
+                        <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-blue-300">
+                            <span className="font-medium">Beginner tip:</span> {exercise.tip}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className={`font-medium mb-2 ml-9 ${done ? 'text-zinc-600' : 'text-green-400'}`}>
-                      {exercise.sets} sets × {exercise.reps} {typeof exercise.reps === 'number' ? 'reps' : ''}
-                    </p>
-                    {exercise.tip && (
-                      <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                        <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-blue-300">
-                          <span className="font-medium">Beginner tip:</span> {exercise.tip}
-                        </p>
+                    {demoImgs && (
+                      <div className="border-t border-zinc-800">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowDemo(prev => ({ ...prev, [key]: !prev[key] })); }}
+                          className="w-full flex items-center justify-between px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors"
+                        >
+                          <span className="flex items-center gap-2">
+                            <PlayCircle className="w-4 h-4 text-green-500" />
+                            How to do it
+                          </span>
+                          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${demoOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {demoOpen && (
+                          <div className="flex gap-2 p-4 pt-0">
+                            {demoImgs.map((src, i) => (
+                              <img
+                                key={i}
+                                src={src}
+                                alt={`${exercise.name} demo ${i + 1}`}
+                                className="flex-1 rounded-lg object-cover aspect-square bg-zinc-800"
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
