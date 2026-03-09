@@ -4,7 +4,7 @@ import { Dumbbell, LogOut, User, Play, ShoppingBag, ArrowRight, CheckCircle2, Ci
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS } from '../data/programs';
+import { getProgramContent } from '../data/programs';
 
 const MyProgramsPage = () => {
   const navigate = useNavigate();
@@ -62,10 +62,9 @@ const MyProgramsPage = () => {
   };
 
   const getProgramTotalDays = (programId) => {
-    if (programId === 'free-starter') {
-      return FREE_STARTER_WORKOUTS.weeks[0].days.length;
-    }
-    return 0;
+    const content = getProgramContent(programId);
+    if (!content) return 0;
+    return content.weeks.reduce((acc, week) => acc + week.days.length, 0);
   };
 
   const getCompletedDays = (programId) => {
@@ -81,10 +80,9 @@ const MyProgramsPage = () => {
   };
 
   const getProgramDays = (programId) => {
-    if (programId === 'free-starter') {
-      return FREE_STARTER_WORKOUTS.weeks[0].days;
-    }
-    return [];
+    const content = getProgramContent(programId);
+    if (!content) return [];
+    return content.weeks.flatMap(w => w.days);
   };
 
   const isDayCompleted = (programId, dayId) => {
@@ -105,14 +103,14 @@ const MyProgramsPage = () => {
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
-          
+
           <div className="hidden md:flex items-center gap-6">
             <Link to="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white">Dashboard</Link>
             <Link to="/my-programs" className="text-sm font-medium text-green-400">My Programs</Link>
             <Link to="/progress" className="text-sm font-medium text-zinc-400 hover:text-white">Progress</Link>
             <Link to="/nutrition" className="text-sm font-medium text-zinc-400 hover:text-white">Nutrition</Link>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400">
               <User className="w-5 h-5" />
@@ -187,11 +185,10 @@ const MyProgramsPage = () => {
                           </h3>
                           <span
                             data-testid={`status-badge-${purchase.program_id}`}
-                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                              isComplete
+                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${isComplete
                                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                 : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                            }`}
+                              }`}
                           >
                             {isComplete ? 'Completed' : 'Active'}
                           </span>
@@ -246,13 +243,12 @@ const MyProgramsPage = () => {
                             <div
                               key={day.id}
                               onClick={() => !isLocked && navigate(`/program/${purchase.program_id}/day/${day.id}`)}
-                              className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
-                                completed
+                              className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${completed
                                   ? 'bg-green-500/10 border border-green-500/20 cursor-pointer hover:bg-green-500/15'
                                   : isLocked
-                                  ? 'bg-zinc-800/40 border border-zinc-800 cursor-not-allowed opacity-50'
-                                  : 'bg-zinc-800/60 border border-zinc-700 cursor-pointer hover:border-green-500/40'
-                              }`}
+                                    ? 'bg-zinc-800/40 border border-zinc-800 cursor-not-allowed opacity-50'
+                                    : 'bg-zinc-800/60 border border-zinc-700 cursor-pointer hover:border-green-500/40'
+                                }`}
                             >
                               <div className="flex items-center gap-3">
                                 {completed ? (
@@ -269,13 +265,12 @@ const MyProgramsPage = () => {
                                   <p className="text-xs text-zinc-600">{day.dayName}</p>
                                 </div>
                               </div>
-                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                                completed
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${completed
                                   ? 'bg-green-500/20 text-green-400'
                                   : isLocked
-                                  ? 'text-zinc-700'
-                                  : 'text-zinc-400'
-                              }`}>
+                                    ? 'text-zinc-700'
+                                    : 'text-zinc-400'
+                                }`}>
                                 {completed ? 'Done' : isLocked ? 'Locked' : 'Start'}
                               </span>
                             </div>

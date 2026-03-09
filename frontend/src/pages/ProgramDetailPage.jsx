@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, PROGRAMS } from '../data/programs';
+import { getProgramContent, PROGRAMS } from '../data/programs';
 
 const ProgramDetailPage = () => {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ const ProgramDetailPage = () => {
 
   // Get program data
   const program = PROGRAMS.find(p => p.id === id);
-  const workoutData = id === 'free-starter' ? FREE_STARTER_WORKOUTS : null;
+  const workoutData = getProgramContent(id);
 
   if (!user) {
     return null;
@@ -84,7 +84,7 @@ const ProgramDetailPage = () => {
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
-          
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400">
               <User className="w-5 h-5" />
@@ -157,16 +157,14 @@ const ProgramDetailPage = () => {
                         <div
                           key={day.id}
                           data-testid={`workout-day-${day.id}`}
-                          className={`bg-zinc-900 border rounded-xl p-6 transition-all hover:border-green-500/50 cursor-pointer ${
-                            completed ? 'border-green-500/50' : 'border-zinc-800'
-                          }`}
+                          className={`bg-zinc-900 border rounded-xl p-6 transition-all hover:border-green-500/50 cursor-pointer ${completed ? 'border-green-500/50' : 'border-zinc-800'
+                            }`}
                           onClick={() => navigate(`/program/${id}/day/${day.id}`)}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                completed ? 'bg-green-500/20' : 'bg-zinc-800'
-                              }`}>
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${completed ? 'bg-green-500/20' : 'bg-zinc-800'
+                                }`}>
                                 {completed ? (
                                   <CheckCircle2 className="w-6 h-6 text-green-500" />
                                 ) : (
@@ -181,11 +179,10 @@ const ProgramDetailPage = () => {
                               </div>
                             </div>
                             <Button
-                              className={`rounded-full ${
-                                completed 
-                                  ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' 
+                              className={`rounded-full ${completed
+                                  ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
                                   : 'bg-green-600 hover:bg-green-700 text-white'
-                              }`}
+                                }`}
                               data-testid={`start-day-${day.id}`}
                             >
                               {completed ? 'Review' : 'Start'}

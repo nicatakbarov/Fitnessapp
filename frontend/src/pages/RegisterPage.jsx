@@ -32,7 +32,7 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirm_password) {
       setError('Passwords do not match');
       return;
@@ -55,7 +55,7 @@ const RegisterPage = () => {
         name: formData.name,
         email: formData.email,
       }));
-      navigate('/dashboard');
+      navigate('/onboarding');
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('body stream already read') || msg.includes('fetch')) {
@@ -180,9 +180,8 @@ const RegisterPage = () => {
                   onChange={handleChange}
                   required
                   data-testid="register-confirm-password-input"
-                  className={`bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-600 h-12 pr-12 focus:border-green-500 focus:ring-green-500/20 ${
-                    formData.confirm_password && (passwordsMatch ? 'border-green-500' : 'border-red-500')
-                  }`}
+                  className={`bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-600 h-12 pr-12 focus:border-green-500 focus:ring-green-500/20 ${formData.confirm_password && (passwordsMatch ? 'border-green-500' : 'border-red-500')
+                    }`}
                 />
                 <button
                   type="button"
@@ -258,8 +257,8 @@ const RegisterPage = () => {
           {/* Login Link */}
           <p className="text-center mt-8 text-zinc-400">
             Already have an account?{' '}
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               className="text-green-500 hover:text-green-400 font-medium transition-colors"
               data-testid="login-link"
             >

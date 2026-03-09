@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS } from '../data/programs';
+import { getProgramContent } from '../data/programs';
 
 const DayWorkoutPage = () => {
   const navigate = useNavigate();
@@ -79,9 +79,15 @@ const DayWorkoutPage = () => {
   };
 
   // Get workout data
-  const workoutData = id === 'free-starter' ? FREE_STARTER_WORKOUTS : null;
-  const dayData = workoutData?.weeks[0]?.days.find(d => d.id === dayId);
-  
+  const workoutData = getProgramContent(id);
+
+  // Find day in any week
+  let dayData = null;
+  workoutData?.weeks.forEach(week => {
+    const found = week.days.find(d => d.id === dayId);
+    if (found) dayData = found;
+  });
+
   // Calculate if all exercises are checked
   const totalExercises = dayData
     ? (dayData.warmup.exercises.length + dayData.mainWorkout.length + dayData.cooldown.exercises.length)
@@ -89,10 +95,11 @@ const DayWorkoutPage = () => {
   const checkedCount = Object.values(checked).filter(Boolean).length;
   const allExercisesDone = checkedCount >= totalExercises;
 
-  // Calculate remaining days
-  const totalDays = workoutData?.weeks[0]?.days.length || 0;
-  const completedDays = progress.filter(p => p.completed).length + (isCompleted && !progress.some(p => p.day_id === dayId) ? 1 : 0);
-  const remainingDays = totalDays - completedDays;
+  // Calculate remaining days in whole program
+  const allDays = workoutData?.weeks.flatMap(w => w.days) || [];
+  const totalDays = allDays.length;
+  const completedDaysCount = progress.filter(p => p.completed).length + (isCompleted && !progress.some(p => p.day_id === dayId) ? 1 : 0);
+  const remainingDays = totalDays - completedDaysCount;
 
   if (!user) {
     return null;
@@ -127,7 +134,7 @@ const DayWorkoutPage = () => {
               Day {dayData.dayNumber} complete!
             </p>
             <p className="text-green-400 font-medium mb-6" data-testid="remaining-days-message">
-              {remainingDays > 0 
+              {remainingDays > 0
                 ? `${remainingDays} day${remainingDays > 1 ? 's' : ''} remaining this week.`
                 : 'You completed all workouts this week! 🎉'
               }
@@ -158,7 +165,7 @@ const DayWorkoutPage = () => {
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
-          
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400">
               <User className="w-5 h-5" />
@@ -200,7 +207,7 @@ const DayWorkoutPage = () => {
                 </span>
               )}
             </div>
-            <h1 
+            <h1
               className="font-heading text-3xl md:text-4xl font-bold text-white uppercase"
               data-testid="day-title"
             >
@@ -227,15 +234,13 @@ const DayWorkoutPage = () => {
                   <div
                     key={index}
                     onClick={() => toggleExercise(key)}
-                    className={`flex items-center gap-4 rounded-xl p-4 cursor-pointer transition-all select-none ${
-                      done
+                    className={`flex items-center gap-4 rounded-xl p-4 cursor-pointer transition-all select-none ${done
                         ? 'bg-green-500/10 border border-green-500/30'
                         : 'bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600'
-                    }`}
+                      }`}
                   >
-                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
-                      done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
-                    }`}>
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                      }`}>
                       {done && <CheckCircle2 className="w-4 h-4 text-white" />}
                     </div>
                     <div className="flex-1">
@@ -272,17 +277,15 @@ const DayWorkoutPage = () => {
                     key={index}
                     data-testid={`exercise-card-${index}`}
                     onClick={() => toggleExercise(key)}
-                    className={`rounded-xl p-5 cursor-pointer select-none transition-all ${
-                      done
+                    className={`rounded-xl p-5 cursor-pointer select-none transition-all ${done
                         ? 'bg-green-500/10 border border-green-500/30'
                         : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
-                          done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
-                        }`}>
+                        <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                          }`}>
                           {done && <CheckCircle2 className="w-4 h-4 text-white" />}
                         </div>
                         <h3 className={`font-semibold text-lg transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
@@ -330,15 +333,13 @@ const DayWorkoutPage = () => {
                   <div
                     key={index}
                     onClick={() => toggleExercise(key)}
-                    className={`flex items-center gap-4 rounded-xl p-4 cursor-pointer transition-all select-none ${
-                      done
+                    className={`flex items-center gap-4 rounded-xl p-4 cursor-pointer transition-all select-none ${done
                         ? 'bg-green-500/10 border border-green-500/30'
                         : 'bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600'
-                    }`}
+                      }`}
                   >
-                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
-                      done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
-                    }`}>
+                    <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                      }`}>
                       {done && <CheckCircle2 className="w-4 h-4 text-white" />}
                     </div>
                     <div className="flex-1">
@@ -367,13 +368,12 @@ const DayWorkoutPage = () => {
             onClick={handleMarkComplete}
             disabled={loading || isCompleted || !allExercisesDone}
             data-testid="mark-complete-btn"
-            className={`w-full py-6 rounded-full font-bold text-lg transition-all ${
-              isCompleted
+            className={`w-full py-6 rounded-full font-bold text-lg transition-all ${isCompleted
                 ? 'bg-zinc-800 text-zinc-400 cursor-not-allowed'
                 : !allExercisesDone
-                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 text-white hover:scale-[1.02] active:scale-[0.98]'
-            }`}
+                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700 text-white hover:scale-[1.02] active:scale-[0.98]'
+              }`}
           >
             {loading ? (
               <span className="flex items-center gap-2">
