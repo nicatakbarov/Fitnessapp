@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle, LayoutDashboard } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
 import { getProgramContent, PROGRAMS } from '../data/programs';
@@ -84,6 +84,12 @@ const ProgramDetailPage = () => {
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
+
+          <div className="hidden md:flex items-center gap-6">
+            <Link to="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white">Dashboard</Link>
+            <Link to="/my-programs" className="text-sm font-medium text-zinc-400 hover:text-white">My Programs</Link>
+            <Link to="/browse" className="text-sm font-medium text-zinc-400 hover:text-white">Browse</Link>
+          </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400">
@@ -204,6 +210,16 @@ const ProgramDetailPage = () => {
               </p>
             </div>
           )}
+          {/* Dashboard CTA */}
+          <div className="mt-10 pt-8 border-t border-zinc-800 flex justify-center">
+            <Button
+              onClick={() => navigate('/dashboard')}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-5 rounded-full font-bold text-base"
+            >
+              <LayoutDashboard className="w-5 h-5 mr-2" />
+              Go to Dashboard
+            </Button>
+          </div>
         </div>
       </main>
     </div>
