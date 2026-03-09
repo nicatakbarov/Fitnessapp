@@ -69,8 +69,15 @@ const DashboardPage = () => {
       return (tiers[b.program_id] || 0) - (tiers[a.program_id] || 0);
     })[0];
 
-  const workoutData = activePurchase ? getProgramContent(activePurchase.program_id) : null;
-  const programProgress = activePurchase ? (progress[activePurchase.program_id] || []) : [];
+  const workoutData = useMemo(
+    () => activePurchase ? getProgramContent(activePurchase.program_id) : null,
+    [activePurchase]
+  );
+
+  const programProgress = useMemo(
+    () => activePurchase ? (progress[activePurchase.program_id] || []) : [],
+    [activePurchase, progress]
+  );
 
   const stats = useMemo(() => {
     const completedWorkouts = programProgress.filter(p => p.completed).length;
