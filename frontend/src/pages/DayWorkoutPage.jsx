@@ -5,42 +5,17 @@ import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
 import { getProgramContent } from '../data/programs';
 
-const BASE_IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
+const YMOVE_KEY = process.env.REACT_APP_YMOVE_API_KEY;
 
-const EXERCISE_DEMO = {
-  'Push-Up': 'Push-Up', 'Push-Ups': 'Push-Up', 'Push-up': 'Push-Up',
-  'Wide Push-Up': 'Wide-Grip_Barbell_Bench_Press',
-  'Squat': 'Barbell_Full_Squat', 'Bodyweight Squat': 'Bodyweight_Squat', 'Bodyweight Squats': 'Bodyweight_Squat',
-  'Goblet Squat (DB)': 'Dumbbell_Goblet_Squat',
-  'Bench Press': 'Barbell_Bench_Press_-_Medium_Grip',
-  'Lat Pulldown': 'Pulldown',
-  'Plank Hold': 'Plank', 'Plank': 'Plank',
-  'Glute Bridge': 'Glute_Ham_Raise', 'Glute Bridges': 'Glute_Ham_Raise',
-  'Lunge': 'Dumbbell_Lunge', 'Lunges': 'Dumbbell_Lunge', 'Dumbbell Lunge': 'Dumbbell_Lunge',
-  'Dumbbell Row': 'Bent_Over_Two-Dumbbell_Row', 'DB Row': 'Bent_Over_Two-Dumbbell_Row',
-  'Shoulder Press': 'Dumbbell_Shoulder_Press', 'DB Shoulder Press': 'Dumbbell_Shoulder_Press',
-  'Bicep Curl': 'Dumbbell_Bicep_Curl', 'DB Bicep Curl': 'Dumbbell_Bicep_Curl',
-  'Tricep Dip': 'Triceps_Dip', 'Dips': 'Triceps_Dip',
-  'Burpee': 'Burpees', 'Burpees': 'Burpees',
-  'Mountain Climber': 'Mountain_Climber', 'Mountain Climbers': 'Mountain_Climber',
-  'Jumping Jack': 'Jumping_Jacks', 'Jumping Jacks': 'Jumping_Jacks',
-  'Deadlift': 'Barbell_Deadlift',
-  'Romanian Deadlift': 'Romanian_Deadlift_with_Dumbbells',
-  'Hip Thrust': 'Barbell_Hip_Thrust',
-  'Calf Raise': 'Standing_Dumbbell_Calf_Raise',
-  'Sit-Up': '3_4_Sit-Up', 'Crunch': 'Crunch',
-  'Leg Raise': 'Hanging_Leg_Raise',
-  'Pull-Up': 'Pull-Up', 'Pull-Ups': 'Pull-Up',
-  'Chin-Up': 'Chin-Up',
-  'Pike Push-Up': 'Pike_Push-up',
-  'Diamond Push-Up': 'Diamond_Push-Up',
-};
-
-const getDemoImages = (name) => {
-  const key = Object.keys(EXERCISE_DEMO).find(k => name.toLowerCase().includes(k.toLowerCase()));
-  if (!key) return null;
-  const id = EXERCISE_DEMO[key];
-  return [`${BASE_IMG}/${id}/0.jpg`, `${BASE_IMG}/${id}/1.jpg`];
+const fetchYMoveVideo = async (name) => {
+  const query = name.replace(/\s*\(.*?\)\s*/g, '').trim();
+  const res = await fetch(
+    `https://exercise-api.ymove.app/api/v2/exercises?search=${encodeURIComponent(query)}&limit=1`,
+    { headers: { 'X-API-Key': YMOVE_KEY } }
+  );
+  const data = await res.json();
+  const primary = data?.data?.[0]?.videos?.find(v => v.isPrimary) || data?.data?.[0]?.videos?.[0];
+  return primary?.videoUrl || null;
 };
 
 const DayWorkoutPage = () => {
@@ -53,9 +28,27 @@ const DayWorkoutPage = () => {
   const [progress, setProgress] = useState([]);
   const [checked, setChecked] = useState({});
   const [showDemo, setShowDemo] = useState({});
+  const [videoCache, setVideoCache] = useState({});
+  const [videoLoading, setVideoLoading] = useState({});
 
   const toggleExercise = (key) => {
     setChecked(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleDemo = async (key, exerciseName) => {
+    const isOpen = !!showDemo[key];
+    setShowDemo(prev => ({ ...prev, [key]: !isOpen }));
+    if (!isOpen && !videoCache[key]) {
+      setVideoLoading(prev => ({ ...prev, [key]: true }));
+      try {
+        const url = await fetchYMoveVideo(exerciseName);
+        setVideoCache(prev => ({ ...prev, [key]: url || 'notfound' }));
+      } catch {
+        setVideoCache(prev => ({ ...prev, [key]: 'notfound' }));
+      } finally {
+        setVideoLoading(prev => ({ ...prev, [key]: false }));
+      }
+    }
   };
 
   const fetchProgress = useCallback(async (userId) => {
@@ -281,7 +274,8 @@ const DayWorkoutPage = () => {
                 const key = `main-${index}`;
                 const done = !!checked[key];
                 const demoOpen = !!showDemo[key];
-                const demoImgs = getDemoImages(exercise.name);
+                const videoUrl = videoCache[key];
+                const isVideoLoading = !!videoLoading[key];
                 return (
                   <div
                     key={index}
@@ -320,33 +314,39 @@ const DayWorkoutPage = () => {
                     </div>
 
                     {/* Demo Section */}
-                    {demoImgs && (
-                      <div className="border-t border-zinc-800">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowDemo(prev => ({ ...prev, [key]: !prev[key] })); }}
-                          className="w-full flex items-center justify-between px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors"
-                        >
-                          <span className="flex items-center gap-2">
-                            <PlayCircle className="w-4 h-4 text-green-500" />
-                            How to do it
-                          </span>
-                          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${demoOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {demoOpen && (
-                          <div className="flex gap-2 p-4 pt-0">
-                            {demoImgs.map((src, i) => (
-                              <img
-                                key={i}
-                                src={src}
-                                alt={`${exercise.name} demo ${i + 1}`}
-                                className="flex-1 rounded-lg object-cover aspect-square bg-zinc-800"
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div className="border-t border-zinc-800">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleDemo(key, exercise.name); }}
+                        className="w-full flex items-center justify-between px-5 py-3 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <span className="flex items-center gap-2">
+                          <PlayCircle className="w-4 h-4 text-green-500" />
+                          How to do it
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${demoOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {demoOpen && (
+                        <div className="px-4 pb-4">
+                          {isVideoLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                              <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          ) : videoUrl && videoUrl !== 'notfound' ? (
+                            <video
+                              src={videoUrl}
+                              className="w-full rounded-lg bg-zinc-800"
+                              controls
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <p className="text-center text-zinc-500 text-sm py-4">Demo not available</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
