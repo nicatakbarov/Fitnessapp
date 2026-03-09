@@ -1,23 +1,6 @@
 // Shared program data for the app
 export const PROGRAMS = [
   {
-    id: 'free-starter',
-    name: 'Free Starter',
-    price: 0,
-    duration: '1 week',
-    frequency: '3x per week',
-    level: 'Beginner',
-    location: 'gym',
-    features: [
-      '3 sample workouts',
-      'Basic nutrition tips',
-      'Progress tracking',
-    ],
-    popular: false,
-    isFree: true,
-    cta: 'Get Free Access',
-  },
-  {
     id: 'starter',
     name: 'Starter',
     price: 0,
@@ -92,6 +75,45 @@ export const PROGRAMS = [
     isFree: true,
     cta: 'Get Free Access',
   },
+  {
+    id: 'transformer-home',
+    name: 'Transformer @ Home',
+    price: 0,
+    duration: '8 weeks',
+    frequency: '4x per week',
+    level: 'Beginner–Intermediate',
+    location: 'home',
+    features: [
+      'Progressive bodyweight system',
+      'Zero equipment needed',
+      'Full home workout library',
+      'Complete meal plan',
+      'Weekly check-ins',
+      'Private community access',
+    ],
+    popular: true,
+    isFree: true,
+    cta: 'Get Free Access',
+  },
+  {
+    id: 'elite-beginner-home',
+    name: 'Elite Beginner @ Home',
+    price: 0,
+    duration: '12 weeks',
+    frequency: '5x per week',
+    level: 'Full beginner system',
+    location: 'home',
+    features: [
+      'Complete home transformation',
+      '1-on-1 style guidance',
+      'Advanced nutrition protocols',
+      'Priority support',
+      'Lifetime access to updates',
+    ],
+    popular: false,
+    isFree: true,
+    cta: 'Get Free Access',
+  },
 ];
 
 import { ALL_PROGRAMS_CONTENT } from './workoutContent';
@@ -101,5 +123,3 @@ export const getProgramContent = (programId) => {
   return ALL_PROGRAMS_CONTENT[programId] || null;
 };
 
-// For backward compatibility (if needed)
-export const FREE_STARTER_WORKOUTS = ALL_PROGRAMS_CONTENT['free-starter'];

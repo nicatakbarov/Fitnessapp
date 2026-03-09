@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS } from '../data/programs';
 
 const ProgressPage = () => {
   const navigate = useNavigate();
@@ -33,8 +32,7 @@ const ProgressPage = () => {
       const { data } = await supabase
         .from('progress')
         .select('*')
-        .eq('user_id', userId)
-        .eq('program_id', 'free-starter');
+        .eq('user_id', userId);
       setProgress(data || []);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
@@ -52,7 +50,7 @@ const ProgressPage = () => {
   // Calculate stats
   const stats = useMemo(() => {
     const completedWorkouts = progress.filter(p => p.completed).length;
-    const totalWorkouts = FREE_STARTER_WORKOUTS?.weeks[0]?.days.length || 3;
+    const totalWorkouts = progress.length || completedWorkouts || 1;
     
     // Current streak (simplified)
     const currentStreak = completedWorkouts;
@@ -125,16 +123,13 @@ const ProgressPage = () => {
       .filter(p => p.completed)
       .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
       .slice(0, 10)
-      .map(p => {
-        const workout = FREE_STARTER_WORKOUTS.weeks[0].days.find(d => d.id === p.day_id);
-        return {
-          ...p,
-          workoutName: workout ? `Day ${workout.dayNumber} — ${workout.title}` : p.day_id,
-          date: new Date(p.completed_at).toLocaleDateString('en-US', { 
-            weekday: 'short', month: 'short', day: 'numeric' 
-          })
-        };
-      });
+      .map(p => ({
+        ...p,
+        workoutName: p.day_id,
+        date: new Date(p.completed_at).toLocaleDateString('en-US', {
+          weekday: 'short', month: 'short', day: 'numeric'
+        })
+      }));
   }, [progress]);
 
   if (!user) return null;

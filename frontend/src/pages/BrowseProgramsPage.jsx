@@ -126,12 +126,7 @@ const BrowseProgramsPage = () => {
           {/* Program Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {PROGRAMS
-              .sort((a, b) => {
-                // Show matching location first
-                if (a.location === user.exerciseLocation && b.location !== user.exerciseLocation) return -1;
-                if (a.location !== user.exerciseLocation && b.location === user.exerciseLocation) return 1;
-                return 0;
-              })
+              .filter((p) => !user.exerciseLocation || p.location === user.exerciseLocation)
               .map((program, index) => {
                 const isOwned = ownedPrograms.includes(program.id);
 
@@ -160,14 +155,6 @@ const BrowseProgramsPage = () => {
                         <div className="flex items-center gap-1 px-4 py-1 rounded-full bg-green-500 text-black text-xs font-bold uppercase">
                           <Star className="w-3 h-3 fill-current" />
                           Most Popular
-                        </div>
-                      </div>
-                    )}
-                    {program.location === user.exerciseLocation && (
-                      <div className={`absolute top-4 right-4 z-10`}>
-                        <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-bold uppercase shadow-lg shadow-blue-900/40 animate-pulse">
-                          <Star className="w-3 h-3 fill-current" />
-                          Recommended
                         </div>
                       </div>
                     )}

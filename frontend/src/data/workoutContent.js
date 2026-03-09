@@ -9479,10 +9479,410 @@ export const HOME_STARTER_DATA = {
   }))
 };
 
+export const FREE_STARTER_HOME_DATA = {
+  "id": "free-starter-home",
+  "name": "Free Starter @ Home",
+  "weeks": [
+    {
+      "week": 1,
+      "days": [
+        {
+          "id": "fsh-w1-d1",
+          "dayNumber": 1,
+          "dayName": "Monday",
+          "title": "Monday: Full Body Basics",
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Jumping Jacks", "duration": "2 min" },
+              { "name": "Arm Circles", "sets": "2", "reps": "15" },
+              { "name": "Hip Circles", "sets": "2", "reps": "10 each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Bodyweight Squats", "sets": 3, "reps": 12, "rest": "60 sec", "tip": "Feet shoulder-width, sit back into heels" },
+            { "name": "Push-ups", "sets": 3, "reps": 8, "rest": "60 sec", "tip": "Drop to knees if needed, keep core tight" },
+            { "name": "Glute Bridge", "sets": 3, "reps": 15, "rest": "45 sec", "tip": "Drive hips up, squeeze glutes at top" },
+            { "name": "Plank Hold", "sets": 3, "reps": "30 seconds", "rest": "45 sec", "tip": "Keep hips level, brace your core" },
+            { "name": "Mountain Climbers", "sets": 3, "reps": 20, "rest": "45 sec", "tip": "Keep hips down, alternate legs fast" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Quad Stretch", "duration": "30 sec each leg" },
+              { "name": "Hamstring Stretch", "duration": "30 sec each leg" },
+              { "name": "Child's Pose", "duration": "60 sec" }
+            ]
+          }
+        },
+        {
+          "id": "fsh-w1-d2",
+          "dayNumber": 2,
+          "dayName": "Wednesday",
+          "title": "Wednesday: Upper Body Focus",
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "High Knees", "duration": "2 min" },
+              { "name": "Shoulder Circles", "sets": "2", "reps": "15" },
+              { "name": "Wrist Rolls", "sets": "2", "reps": "10 each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Push-ups", "sets": 3, "reps": 10, "rest": "60 sec", "tip": "Full range, chest to floor" },
+            { "name": "Diamond Push-ups", "sets": 3, "reps": 8, "rest": "60 sec", "tip": "Hands form a diamond under chest, targets triceps" },
+            { "name": "Tricep Dips (Chair)", "sets": 3, "reps": 10, "rest": "60 sec", "tip": "Use a sturdy chair, lower slowly" },
+            { "name": "Pike Push-ups", "sets": 3, "reps": 8, "rest": "60 sec", "tip": "Hips high, lower head toward floor" },
+            { "name": "Superman Hold", "sets": 3, "reps": 12, "rest": "45 sec", "tip": "Lift chest and legs off floor simultaneously" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Doorframe Chest Stretch", "duration": "30 sec" },
+              { "name": "Cross-Body Shoulder Stretch", "duration": "30 sec each" },
+              { "name": "Cobra Pose", "duration": "45 sec" }
+            ]
+          }
+        },
+        {
+          "id": "fsh-w1-d3",
+          "dayNumber": 3,
+          "dayName": "Friday",
+          "title": "Friday: Lower Body & Core",
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Butt Kicks", "duration": "2 min" },
+              { "name": "Leg Swings", "sets": "2", "reps": "15 each" },
+              { "name": "Hip Flexor Stretch", "duration": "20 sec each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Reverse Lunges", "sets": 3, "reps": "10 each leg", "rest": "60 sec", "tip": "Keep front knee above ankle" },
+            { "name": "Wall Sit", "sets": 3, "reps": "30 seconds", "rest": "60 sec", "tip": "Thighs parallel to floor, back flat against wall" },
+            { "name": "Single-Leg Glute Bridge", "sets": 3, "reps": "12 each leg", "rest": "45 sec", "tip": "Keep hips level, drive through heel" },
+            { "name": "Bicycle Crunches", "sets": 3, "reps": 20, "rest": "45 sec", "tip": "Rotate fully, don't pull your neck" },
+            { "name": "Plank Hold", "sets": 3, "reps": "30 seconds", "rest": "45 sec", "tip": "Squeeze everything tight" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Pigeon Pose", "duration": "45 sec each side" },
+              { "name": "Hamstring Stretch", "duration": "30 sec each leg" },
+              { "name": "Lower Back Twist", "duration": "30 sec each side" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+};
+
+// Phase config for progressive home workouts
+const HOME_PHASES = [
+  { phase: 'Foundation', weeks: [1, 2], squat: 12, pushup: 8, lunge: 10, plank: 30, bridge: 15, dip: 8, extra: 15 },
+  { phase: 'Building', weeks: [3, 4], squat: 15, pushup: 12, lunge: 12, plank: 40, bridge: 20, dip: 12, extra: 18 },
+  { phase: 'Strength', weeks: [5, 6], squat: 18, pushup: 15, lunge: 14, plank: 50, bridge: 22, dip: 15, extra: 20 },
+  { phase: 'Peak', weeks: [7, 8], squat: 20, pushup: 18, lunge: 16, plank: 60, bridge: 25, dip: 18, extra: 25 },
+];
+
+const getPhase = (weekIndex) => HOME_PHASES.find(p => p.weeks.includes(weekIndex + 1)) || HOME_PHASES[0];
+
+export const TRANSFORMER_HOME_DATA = {
+  "id": "transformer-home",
+  "name": "Transformer @ Home",
+  "weeks": Array.from({ length: 8 }, (_, i) => {
+    const p = getPhase(i);
+    return {
+      "week": i + 1,
+      "days": [
+        {
+          "id": `th-w${i+1}-d1`,
+          "dayNumber": (i * 4) + 1,
+          "dayName": "Monday",
+          "title": `${p.phase}: Push Day`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Jumping Jacks", "duration": "2 min" },
+              { "name": "Arm Circles", "reps": "15" },
+              { "name": "Shoulder Rolls", "reps": "10" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Push-ups", "sets": 4, "reps": p.pushup, "rest": "60 sec", "tip": "Chest to floor, elbows 45° from body" },
+            { "name": "Pike Push-ups", "sets": 3, "reps": p.dip, "rest": "60 sec", "tip": "Hips high, nose to floor" },
+            { "name": "Tricep Dips (Chair)", "sets": 3, "reps": p.dip, "rest": "60 sec", "tip": "Lower slowly, push through palms" },
+            { "name": "Diamond Push-ups", "sets": 3, "reps": p.pushup - 2, "rest": "60 sec", "tip": "Hands form diamond under chest" },
+            { "name": "Plank Hold", "sets": 3, "reps": `${p.plank} sec`, "rest": "45 sec", "tip": "Squeeze glutes and core" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Cobra Pose", "duration": "45 sec" },
+              { "name": "Chest Stretch (doorframe)", "duration": "30 sec" },
+              { "name": "Tricep Overhead Stretch", "duration": "30 sec each" }
+            ]
+          }
+        },
+        {
+          "id": `th-w${i+1}-d2`,
+          "dayNumber": (i * 4) + 2,
+          "dayName": "Tuesday",
+          "title": `${p.phase}: Pull & Core`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "High Knees", "duration": "2 min" },
+              { "name": "Hip Circles", "reps": "10 each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Doorframe Rows", "sets": 4, "reps": p.pushup, "rest": "60 sec", "tip": "Pull chest to doorframe, squeeze shoulder blades" },
+            { "name": "Superman Hold", "sets": 3, "reps": p.extra, "rest": "45 sec", "tip": "Hold 2 sec at top, control the descent" },
+            { "name": "Reverse Snow Angels (floor)", "sets": 3, "reps": p.dip, "rest": "45 sec", "tip": "Lie face down, move arms in a arc" },
+            { "name": "Bicycle Crunches", "sets": 3, "reps": p.extra, "rest": "45 sec", "tip": "Rotate fully, slow and controlled" },
+            { "name": "Dead Bug", "sets": 3, "reps": "10 each side", "rest": "45 sec", "tip": "Lower back stays pressed to floor" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Child's Pose", "duration": "60 sec" },
+              { "name": "Thoracic Rotation Stretch", "duration": "30 sec each" }
+            ]
+          }
+        },
+        {
+          "id": `th-w${i+1}-d3`,
+          "dayNumber": (i * 4) + 3,
+          "dayName": "Thursday",
+          "title": `${p.phase}: Leg Day`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Butt Kicks", "duration": "2 min" },
+              { "name": "Leg Swings", "reps": "15 each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Bodyweight Squats", "sets": 4, "reps": p.squat, "rest": "60 sec", "tip": "Depth below parallel, chest tall" },
+            { "name": "Reverse Lunges", "sets": 3, "reps": `${p.lunge} each leg`, "rest": "60 sec", "tip": "Keep torso upright" },
+            { "name": "Wall Sit", "sets": 3, "reps": `${p.plank + 10} sec`, "rest": "60 sec", "tip": "Thighs parallel, back flat" },
+            { "name": "Glute Bridge", "sets": 3, "reps": p.bridge, "rest": "45 sec", "tip": "Squeeze hard at top, 1-sec hold" },
+            { "name": "Calf Raises (step)", "sets": 3, "reps": p.extra, "rest": "45 sec", "tip": "Full range, slow lowering" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Quad Stretch", "duration": "30 sec each leg" },
+              { "name": "Pigeon Pose", "duration": "45 sec each side" }
+            ]
+          }
+        },
+        {
+          "id": `th-w${i+1}-d4`,
+          "dayNumber": (i * 4) + 4,
+          "dayName": "Friday",
+          "title": `${p.phase}: Full Body HIIT`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Jump Rope (or imaginary)", "duration": "3 min" },
+              { "name": "Dynamic Hip Openers", "reps": "10 each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Jump Squats", "sets": 4, "reps": p.squat - 4, "rest": "60 sec", "tip": "Land softly, bend knees on landing" },
+            { "name": "Burpees", "sets": 3, "reps": p.dip - 2, "rest": "75 sec", "tip": "Chest to floor, explode up" },
+            { "name": "Push-up to T Rotation", "sets": 3, "reps": "8 each side", "rest": "60 sec", "tip": "Rotate to full side plank" },
+            { "name": "Mountain Climbers", "sets": 3, "reps": `${p.plank} sec`, "rest": "45 sec", "tip": "Keep hips low, sprint pace" },
+            { "name": "Plank to Downward Dog", "sets": 3, "reps": 12, "rest": "45 sec", "tip": "Flow smoothly between positions" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Full Body Stretch Flow", "duration": "3 min" },
+              { "name": "Breathing & Relaxation", "duration": "2 min" }
+            ]
+          }
+        }
+      ]
+    };
+  })
+};
+
+// Phase config for 12-week elite home program
+const ELITE_HOME_PHASES = [
+  { phase: 'Foundation', weeks: [1,2,3], squat: 15, pushup: 10, lunge: 10, plank: 35, bridge: 18, pull: 10, core: 15 },
+  { phase: 'Building', weeks: [4,5,6], squat: 18, pushup: 14, lunge: 12, plank: 45, bridge: 22, pull: 14, core: 20 },
+  { phase: 'Strength', weeks: [7,8,9], squat: 20, pushup: 18, lunge: 15, plank: 55, bridge: 25, pull: 18, core: 25 },
+  { phase: 'Performance', weeks: [10,11,12], squat: 25, pushup: 22, lunge: 18, plank: 70, bridge: 30, pull: 22, core: 30 },
+];
+
+const getElitePhase = (weekIndex) => ELITE_HOME_PHASES.find(p => p.weeks.includes(weekIndex + 1)) || ELITE_HOME_PHASES[0];
+
+export const ELITE_BEGINNER_HOME_DATA = {
+  "id": "elite-beginner-home",
+  "name": "Elite Beginner @ Home",
+  "weeks": Array.from({ length: 12 }, (_, i) => {
+    const p = getElitePhase(i);
+    return {
+      "week": i + 1,
+      "days": [
+        {
+          "id": `ebh-w${i+1}-d1`,
+          "dayNumber": (i * 5) + 1,
+          "dayName": "Monday",
+          "title": `${p.phase}: Push (Chest & Triceps)`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Jumping Jacks", "duration": "2 min" },
+              { "name": "Arm Circles", "reps": "20" },
+              { "name": "Shoulder Stretch", "duration": "30 sec each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Push-ups", "sets": 4, "reps": p.pushup, "rest": "60 sec", "tip": "Chest to floor, full range every rep" },
+            { "name": "Wide Push-ups", "sets": 3, "reps": p.pushup - 2, "rest": "60 sec", "tip": "Wider stance targets chest more" },
+            { "name": "Diamond Push-ups", "sets": 3, "reps": p.pushup - 4, "rest": "60 sec", "tip": "Elbows stay close to body" },
+            { "name": "Tricep Dips (Chair)", "sets": 3, "reps": p.pull, "rest": "60 sec", "tip": "Lower to 90° elbow bend" },
+            { "name": "Pike Push-ups", "sets": 3, "reps": p.pushup - 4, "rest": "60 sec", "tip": "Shoulders lead the movement" },
+            { "name": "Plank", "sets": 3, "reps": `${p.plank} sec`, "rest": "45 sec", "tip": "Perfect form, no sagging" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Doorframe Chest Stretch", "duration": "45 sec" },
+              { "name": "Cobra Pose", "duration": "60 sec" },
+              { "name": "Tricep Overhead Stretch", "duration": "30 sec each" }
+            ]
+          }
+        },
+        {
+          "id": `ebh-w${i+1}-d2`,
+          "dayNumber": (i * 5) + 2,
+          "dayName": "Tuesday",
+          "title": `${p.phase}: Pull (Back & Biceps)`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "High Knees", "duration": "2 min" },
+              { "name": "Shoulder Rolls", "reps": "15 each direction" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Doorframe Rows", "sets": 4, "reps": p.pull, "rest": "60 sec", "tip": "Retract scapula, slow lowering" },
+            { "name": "Superman Hold", "sets": 4, "reps": p.core, "rest": "45 sec", "tip": "Hold 2 sec at top each rep" },
+            { "name": "Reverse Snow Angels (floor)", "sets": 3, "reps": p.pull, "rest": "45 sec", "tip": "Keep arms off floor throughout" },
+            { "name": "Prone Y-T-W Raises", "sets": 3, "reps": 10, "rest": "45 sec", "tip": "Squeeze back muscles, control descent" },
+            { "name": "Bicep Curl (resistance band / towel)", "sets": 3, "reps": p.pull, "rest": "60 sec", "tip": "Full range, no swinging" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Child's Pose", "duration": "60 sec" },
+              { "name": "Cross-Body Shoulder Stretch", "duration": "30 sec each" },
+              { "name": "Lat Stretch (arm overhead)", "duration": "30 sec each" }
+            ]
+          }
+        },
+        {
+          "id": `ebh-w${i+1}-d3`,
+          "dayNumber": (i * 5) + 3,
+          "dayName": "Wednesday",
+          "title": `${p.phase}: Leg Day`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Butt Kicks", "duration": "2 min" },
+              { "name": "Leg Swings", "reps": "15 each" },
+              { "name": "Hip Circles", "reps": "10 each direction" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Bodyweight Squats", "sets": 4, "reps": p.squat, "rest": "60 sec", "tip": "Below parallel, knees track toes" },
+            { "name": "Reverse Lunges", "sets": 3, "reps": `${p.lunge} each leg`, "rest": "60 sec", "tip": "Torso upright, controlled descent" },
+            { "name": "Sumo Squats", "sets": 3, "reps": p.squat - 3, "rest": "60 sec", "tip": "Wide stance, toes out 45°" },
+            { "name": "Glute Bridge", "sets": 4, "reps": p.bridge, "rest": "45 sec", "tip": "1-second squeeze at top" },
+            { "name": "Wall Sit", "sets": 3, "reps": `${p.plank + 15} sec`, "rest": "60 sec", "tip": "Back flat, thighs parallel" },
+            { "name": "Calf Raises", "sets": 3, "reps": p.core + 5, "rest": "45 sec", "tip": "Full range, slow eccentric" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Pigeon Pose", "duration": "60 sec each side" },
+              { "name": "Quad Stretch", "duration": "30 sec each leg" },
+              { "name": "Hamstring Stretch", "duration": "30 sec each leg" }
+            ]
+          }
+        },
+        {
+          "id": `ebh-w${i+1}-d4`,
+          "dayNumber": (i * 5) + 4,
+          "dayName": "Friday",
+          "title": `${p.phase}: Core & Cardio`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Jump Rope (imaginary)", "duration": "3 min" },
+              { "name": "Hip Flexor Stretch", "duration": "20 sec each" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Plank", "sets": 4, "reps": `${p.plank} sec`, "rest": "45 sec", "tip": "Squeeze everything, don't let hips drop" },
+            { "name": "Bicycle Crunches", "sets": 3, "reps": p.core, "rest": "45 sec", "tip": "Full rotation, controlled tempo" },
+            { "name": "Dead Bug", "sets": 3, "reps": "12 each side", "rest": "45 sec", "tip": "Lower back stays on floor" },
+            { "name": "Mountain Climbers", "sets": 4, "reps": `${p.plank} sec`, "rest": "45 sec", "tip": "Keep hips level, alternate fast" },
+            { "name": "Burpees", "sets": 3, "reps": p.core - 5, "rest": "75 sec", "tip": "Chest to floor, jump high" },
+            { "name": "High Knees Sprint", "sets": 3, "reps": "30 sec", "rest": "30 sec", "tip": "Drive knees above hip height" }
+          ],
+          "cooldown": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Spinal Twist", "duration": "30 sec each side" },
+              { "name": "Hip Flexor Stretch", "duration": "45 sec each" },
+              { "name": "Full Body Breathing", "duration": "2 min" }
+            ]
+          }
+        },
+        {
+          "id": `ebh-w${i+1}-d5`,
+          "dayNumber": (i * 5) + 5,
+          "dayName": "Saturday",
+          "title": `${p.phase}: Full Body Power`,
+          "warmup": {
+            "duration": "5 min",
+            "exercises": [
+              { "name": "Dynamic Warm-up Circuit", "duration": "5 min" }
+            ]
+          },
+          "mainWorkout": [
+            { "name": "Jump Squats", "sets": 4, "reps": p.squat - 5, "rest": "60 sec", "tip": "Land softly, absorb through legs" },
+            { "name": "Clapping Push-ups (or fast push-ups)", "sets": 3, "reps": p.pushup - 4, "rest": "75 sec", "tip": "Explosive push, controlled landing" },
+            { "name": "Lateral Lunges", "sets": 3, "reps": `${p.lunge} each side`, "rest": "60 sec", "tip": "Sit back on working leg" },
+            { "name": "Push-up to T Rotation", "sets": 3, "reps": "8 each side", "rest": "60 sec", "tip": "Rotate to full side plank at top" },
+            { "name": "Tuck Jumps", "sets": 3, "reps": p.core - 10, "rest": "60 sec", "tip": "Pull knees to chest, land soft" },
+            { "name": "Plank to Downward Dog", "sets": 3, "reps": 12, "rest": "45 sec", "tip": "Flow between positions smoothly" }
+          ],
+          "cooldown": {
+            "duration": "7 min",
+            "exercises": [
+              { "name": "Full Body Stretch Flow", "duration": "5 min" },
+              { "name": "Meditation & Breathing", "duration": "2 min" }
+            ]
+          }
+        }
+      ]
+    };
+  })
+};
+
 export const ALL_PROGRAMS_CONTENT = {
-  'free-starter': FREE_STARTER_DATA,
   'starter': STARTER_DATA,
   'transformer': TRANSFORMER_DATA,
   'elite-beginner': ELITE_BEGINNER_DATA,
   'home-starter': HOME_STARTER_DATA,
+  'transformer-home': TRANSFORMER_HOME_DATA,
+  'elite-beginner-home': ELITE_BEGINNER_HOME_DATA,
 };
