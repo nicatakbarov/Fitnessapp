@@ -23,25 +23,6 @@ const loadYuhonasDb = async () => {
 const fetchExerciseMedia = async (name) => {
   const clean = name.replace(/\s*\(.*?\)\s*/g, '').trim();
 
-  // 1️⃣ Try wger.de (good quality photos)
-  try {
-    const res = await fetch(
-      `https://wger.de/api/v2/exercise/search/?term=${encodeURIComponent(clean)}&language=english&format=json`
-    );
-    const data = await res.json();
-    const match = data.suggestions?.find(s => s.data?.image);
-    if (match) {
-      return {
-        imageUrl: `https://wger.de${match.data.image}`,
-        name: match.value,
-        muscles: null,
-        instructions: null,
-        source: 'wger',
-      };
-    }
-  } catch {}
-
-  // 2️⃣ Fallback: yuhonas/free-exercise-db (873 exercises, all with photos)
   try {
     const db = await loadYuhonasDb();
     const nameLower = clean.toLowerCase();
@@ -472,7 +453,7 @@ const ExerciseMediaCard = ({ media, exerciseName }) => (
       </div>
       {/* Source badge */}
       <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-zinc-400 text-[10px] px-2 py-1 rounded-full">
-        {media.source === 'wger' ? 'wger.de' : 'Free Exercise DB'}
+        Free Exercise DB
       </div>
     </div>
 
