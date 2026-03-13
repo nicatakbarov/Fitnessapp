@@ -1,55 +1,60 @@
-import { Check, Star, Zap } from 'lucide-react';
+import { Check, Gift, Zap, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
 
 const programs = [
   {
+    id: 'free-starter',
+    name: 'Free Starter',
+    duration: '3 weeks',
+    frequency: '3x per week',
+    level: 'Absolute Beginner',
+    features: [
+      'Full gym workout plan',
+      'Warm-up & cool-down routines',
+      'Day-by-day progress tracking',
+      'Exercise checklist per session',
+    ],
+  },
+  {
+    id: 'starter',
     name: 'Starter',
-    price: 19,
     duration: '4 weeks',
     frequency: '3x per week',
     level: 'Beginner',
     features: [
-      'Basic movements library',
-      'Warm-up & cool-down routines',
+      'Push / Pull / Legs split',
+      'Progressive overload built-in',
       'Beginner nutrition guide',
-      'Email support',
+      'Full progress tracking',
     ],
-    popular: false,
-    cta: 'Get Starter',
   },
   {
+    id: 'transformer',
     name: 'Transformer',
-    price: 39,
     duration: '8 weeks',
     frequency: '4x per week',
     level: 'Beginner–Intermediate',
     features: [
-      'Progressive overload system',
-      'Full workout video library',
+      'Upper / Lower periodized split',
+      '4 progressive phases',
       'Complete meal plan',
-      'Weekly check-ins',
-      'Private community access',
+      'Weekly check-in structure',
     ],
-    popular: true,
-    cta: 'Get Transformer',
+    highlight: true,
   },
   {
+    id: 'elite-beginner',
     name: 'Elite Beginner',
-    price: 59,
     duration: '12 weeks',
     frequency: '5x per week',
-    level: 'Full beginner system',
+    level: 'Full transformation',
     features: [
-      'Complete transformation system',
-      '1-on-1 style video guidance',
+      'PPL + Full Body system',
+      '4 advanced phases',
       'Advanced nutrition protocols',
-      'Priority support',
-      'Lifetime access to updates',
       'Bonus: Mobility program',
     ],
-    popular: false,
-    cta: 'Get Elite',
   },
 ];
 
@@ -64,73 +69,81 @@ export const Programs = () => {
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-8">
           <span className="text-green-500 text-sm font-semibold uppercase tracking-widest">
-            Choose Your Path
+            All Programs
           </span>
           <h2 className="font-heading text-4xl md:text-5xl font-bold text-white uppercase mt-4 mb-4">
             Training Programs
           </h2>
           <p className="text-zinc-400 max-w-xl mx-auto">
-            Select the perfect program for your fitness level and goals.
+            Every program is completely free. No credit card. No subscriptions. Just sign up and start training.
           </p>
         </div>
 
+        {/* Free Banner */}
+        <div className="flex items-center justify-center mb-14">
+          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-green-500/10 border border-green-500/40 text-green-400 font-semibold text-sm">
+            <Gift className="w-5 h-5 text-green-400" />
+            100% Free — No Credit Card Required
+          </div>
+        </div>
+
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {programs.map((program, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {programs.map((program) => (
             <div
-              key={index}
-              data-testid={`program-card-${program.name.toLowerCase().replace(' ', '-')}`}
-              className={`relative flex flex-col rounded-3xl p-8 transition-all duration-300 hover:-translate-y-2 ${
-                program.popular
+              key={program.id}
+              data-testid={`program-card-${program.id}`}
+              className={`relative flex flex-col rounded-3xl p-7 transition-all duration-300 hover:-translate-y-2 ${
+                program.highlight
                   ? 'bg-gradient-to-b from-green-500/10 to-zinc-900 border-2 border-green-500 shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)]'
                   : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
               }`}
             >
               {/* Popular Badge */}
-              {program.popular && (
+              {program.highlight && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <div className="flex items-center gap-1 px-4 py-1 rounded-full bg-green-500 text-black text-xs font-bold uppercase">
-                    <Star className="w-3 h-3 fill-current" />
+                  <div className="flex items-center gap-1 px-4 py-1 rounded-full bg-green-500 text-black text-xs font-bold uppercase whitespace-nowrap">
+                    <Zap className="w-3 h-3 fill-current" />
                     Most Popular
                   </div>
                 </div>
               )}
 
+              {/* Free Badge */}
+              <div className="flex items-center gap-1.5 mb-4">
+                <span className="px-3 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wide">
+                  Free
+                </span>
+              </div>
+
               {/* Program Name */}
-              <h3 className="font-heading text-2xl font-bold text-white uppercase mb-2">
+              <h3 className="font-heading text-xl font-bold text-white uppercase mb-1">
                 {program.name}
               </h3>
 
-              {/* Price */}
-              <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-zinc-500">$</span>
-                <span className="font-heading text-5xl font-bold text-white">{program.price}</span>
-                <span className="text-zinc-500">/program</span>
-              </div>
-
               {/* Details */}
-              <div className="space-y-3 mb-6 pb-6 border-b border-zinc-800">
-                <div className="flex items-center justify-between text-sm">
+              <div className="space-y-1.5 mb-5 pb-5 border-b border-zinc-800 text-sm">
+                <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Duration</span>
                   <span className="text-white font-medium">{program.duration}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Frequency</span>
                   <span className="text-white font-medium">{program.frequency}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Level</span>
                   <span className="text-white font-medium">{program.level}</span>
                 </div>
               </div>
 
               {/* Features */}
-              <ul className="space-y-3 mb-8 flex-grow">
-                {program.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <ul className="space-y-2.5 mb-8 flex-grow">
+                {program.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                     <span className="text-zinc-300 text-sm">{feature}</span>
                   </li>
                 ))}
@@ -139,18 +152,23 @@ export const Programs = () => {
               {/* CTA */}
               <Button
                 onClick={() => navigate('/register')}
-                data-testid={`program-cta-${program.name.toLowerCase().replace(' ', '-')}`}
-                className={`w-full py-6 rounded-full font-bold text-base transition-all hover:scale-105 active:scale-95 ${
-                  program.popular
+                data-testid={`program-cta-${program.id}`}
+                className={`w-full py-5 rounded-full font-bold text-sm transition-all hover:scale-105 active:scale-95 ${
+                  program.highlight
                     ? 'bg-green-500 hover:bg-green-600 text-black shadow-lg shadow-green-900/30'
                     : 'bg-zinc-800 hover:bg-zinc-700 text-white'
                 }`}
               >
-                {program.popular && <Zap className="w-4 h-4 mr-2 fill-current" />}
-                {program.cta}
+                Start Free
               </Button>
             </div>
           ))}
+        </div>
+
+        {/* Bottom note */}
+        <div className="flex items-center justify-center gap-2 mt-10 text-zinc-500 text-sm">
+          <Lock className="w-4 h-4" />
+          <span>No hidden fees. All programs unlock immediately after sign-up.</span>
         </div>
       </div>
     </section>
