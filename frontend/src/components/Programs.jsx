@@ -1,60 +1,43 @@
-import { Check, Gift, Zap, Lock } from 'lucide-react';
+import { Dumbbell, Home, ClipboardList, CheckCircle, ArrowRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
 
-const programs = [
+const features = [
   {
-    id: 'free-starter',
-    name: 'Free Starter',
-    duration: '3 weeks',
-    frequency: '3x per week',
-    level: 'Absolute Beginner',
-    features: [
-      'Full gym workout plan',
-      'Warm-up & cool-down routines',
-      'Day-by-day progress tracking',
-      'Exercise checklist per session',
-    ],
+    icon: Dumbbell,
+    title: 'Gym Plans',
+    subtitle: 'Hazır Gym Programları',
+    description:
+      'Push/Pull/Legs, Upper/Lower splits kimi strukturlanmiş gym programlari. Her həftə progressive overload ilə irəlilə. Başlanğıc səviyyəsindən peşəkar səviyyəyə qədər hər kəs üçün.',
+    highlights: ['3–5 günlük proqramlar', 'Progressiv yükləmə sistemi', 'Isınma & soyuma məşqləri'],
+    color: 'from-green-500/20 to-transparent',
+    border: 'border-green-500/30 hover:border-green-500/60',
+    iconBg: 'bg-green-500/10',
+    iconColor: 'text-green-400',
   },
   {
-    id: 'starter',
-    name: 'Starter',
-    duration: '4 weeks',
-    frequency: '3x per week',
-    level: 'Beginner',
-    features: [
-      'Push / Pull / Legs split',
-      'Progressive overload built-in',
-      'Beginner nutrition guide',
-      'Full progress tracking',
-    ],
+    icon: Home,
+    title: 'Home Plans',
+    subtitle: 'Evdə Məşq',
+    description:
+      'Heç bir avadanlıq lazım deyil. Yaşayış otağından, bağçadan ya da haradan olursa olsun məşq et. Bədən çəkisi ilə tam effektiv proqramlar.',
+    highlights: ['Avadanlıqsız məşqlər', 'İstənilən yerdə', 'Tam bədən proqramları'],
+    color: 'from-blue-500/20 to-transparent',
+    border: 'border-blue-500/30 hover:border-blue-500/60',
+    iconBg: 'bg-blue-500/10',
+    iconColor: 'text-blue-400',
   },
   {
-    id: 'transformer',
-    name: 'Transformer',
-    duration: '8 weeks',
-    frequency: '4x per week',
-    level: 'Beginner–Intermediate',
-    features: [
-      'Upper / Lower periodized split',
-      '4 progressive phases',
-      'Complete meal plan',
-      'Weekly check-in structure',
-    ],
-    highlight: true,
-  },
-  {
-    id: 'elite-beginner',
-    name: 'Elite Beginner',
-    duration: '12 weeks',
-    frequency: '5x per week',
-    level: 'Full transformation',
-    features: [
-      'PPL + Full Body system',
-      '4 advanced phases',
-      'Advanced nutrition protocols',
-      'Bonus: Mobility program',
-    ],
+    icon: ClipboardList,
+    title: 'Custom Plans',
+    subtitle: 'Öz Planını Yarat',
+    description:
+      'Özünün planını yarat, öz məşqlərini əlavə et və hər sessiyanı izlə. İrəliləyişini gün-gün gör, motivasiyanı qoru.',
+    highlights: ['Fərdi plan yaratma', 'Gündəlik irəliləyiş izləmə', 'Məşq tarixçəsi'],
+    color: 'from-purple-500/20 to-transparent',
+    border: 'border-purple-500/30 hover:border-purple-500/60',
+    iconBg: 'bg-purple-500/10',
+    iconColor: 'text-purple-400',
   },
 ];
 
@@ -68,108 +51,87 @@ export const Programs = () => {
       className="py-24 md:py-32 bg-[#0a0a0a]"
     >
       <div className="max-w-7xl mx-auto px-6">
+
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <span className="text-green-500 text-sm font-semibold uppercase tracking-widest">
-            All Programs
+            Tamamilə Pulsuz
           </span>
-          <h2 className="font-heading text-4xl md:text-5xl font-bold text-white uppercase mt-4 mb-4">
-            Training Programs
+          <h2 className="font-heading text-4xl md:text-5xl font-bold text-white uppercase mt-4 mb-5">
+            Hər Şey Burada,{' '}
+            <span className="text-green-500">Pulsuz</span>
           </h2>
-          <p className="text-zinc-400 max-w-xl mx-auto">
-            Every program is completely free. No credit card. No subscriptions. Just sign up and start training.
+          <p className="text-zinc-400 max-w-2xl mx-auto text-base leading-relaxed">
+            FitStart-da qeydiyyatdan keç — heç bir ödəniş, abunəlik yoxdur. Gym-də və ya evdə hazır
+            proqramlar al, ya da öz planını yarat və irəliləyişini izlə.
           </p>
         </div>
 
-        {/* Free Banner */}
-        <div className="flex items-center justify-center mb-14">
-          <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-green-500/10 border border-green-500/40 text-green-400 font-semibold text-sm">
-            <Gift className="w-5 h-5 text-green-400" />
-            100% Free — No Credit Card Required
+        {/* Free pill */}
+        <div className="flex justify-center mb-16">
+          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium">
+            <CheckCircle className="w-4 h-4" />
+            Kredit kartı tələb olunmur · Abunəlik yoxdur · Reklam yoxdur
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {programs.map((program) => (
-            <div
-              key={program.id}
-              data-testid={`program-card-${program.id}`}
-              className={`relative flex flex-col rounded-3xl p-7 transition-all duration-300 hover:-translate-y-2 ${
-                program.highlight
-                  ? 'bg-gradient-to-b from-green-500/10 to-zinc-900 border-2 border-green-500 shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)]'
-                  : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
-              }`}
-            >
-              {/* Popular Badge */}
-              {program.highlight && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <div className="flex items-center gap-1 px-4 py-1 rounded-full bg-green-500 text-black text-xs font-bold uppercase whitespace-nowrap">
-                    <Zap className="w-3 h-3 fill-current" />
-                    Most Popular
-                  </div>
-                </div>
-              )}
-
-              {/* Free Badge */}
-              <div className="flex items-center gap-1.5 mb-4">
-                <span className="px-3 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wide">
-                  Free
-                </span>
-              </div>
-
-              {/* Program Name */}
-              <h3 className="font-heading text-xl font-bold text-white uppercase mb-1">
-                {program.name}
-              </h3>
-
-              {/* Details */}
-              <div className="space-y-1.5 mb-5 pb-5 border-b border-zinc-800 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Duration</span>
-                  <span className="text-white font-medium">{program.duration}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Frequency</span>
-                  <span className="text-white font-medium">{program.frequency}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Level</span>
-                  <span className="text-white font-medium">{program.level}</span>
-                </div>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-2.5 mb-8 flex-grow">
-                {program.features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-zinc-300 text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <Button
-                onClick={() => navigate('/register')}
-                data-testid={`program-cta-${program.id}`}
-                className={`w-full py-5 rounded-full font-bold text-sm transition-all hover:scale-105 active:scale-95 ${
-                  program.highlight
-                    ? 'bg-green-500 hover:bg-green-600 text-black shadow-lg shadow-green-900/30'
-                    : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                }`}
+        {/* Feature Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {features.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={feature.title}
+                className={`relative flex flex-col rounded-3xl p-8 bg-zinc-900 border transition-all duration-300 hover:-translate-y-2 ${feature.border}`}
               >
-                Start Free
-              </Button>
-            </div>
-          ))}
+                {/* Gradient glow */}
+                <div className={`absolute inset-0 rounded-3xl bg-gradient-to-b ${feature.color} pointer-events-none`} />
+
+                {/* Icon */}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${feature.iconBg}`}>
+                  <Icon className={`w-7 h-7 ${feature.iconColor}`} />
+                </div>
+
+                {/* Text */}
+                <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${feature.iconColor}`}>
+                  {feature.subtitle}
+                </p>
+                <h3 className="font-heading text-2xl font-bold text-white uppercase mb-3">
+                  {feature.title}
+                </h3>
+                <p className="text-zinc-400 text-sm leading-relaxed mb-6 flex-grow">
+                  {feature.description}
+                </p>
+
+                {/* Highlights */}
+                <ul className="space-y-2">
+                  {feature.highlights.map((h) => (
+                    <li key={h} className="flex items-center gap-2.5 text-sm text-zinc-300">
+                      <CheckCircle className={`w-4 h-4 flex-shrink-0 ${feature.iconColor}`} />
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Bottom note */}
-        <div className="flex items-center justify-center gap-2 mt-10 text-zinc-500 text-sm">
-          <Lock className="w-4 h-4" />
-          <span>No hidden fees. All programs unlock immediately after sign-up.</span>
+        {/* CTA */}
+        <div className="text-center">
+          <Button
+            onClick={() => navigate('/register')}
+            data-testid="programs-cta"
+            className="px-10 py-6 rounded-full bg-green-500 hover:bg-green-600 text-black font-bold text-base shadow-lg shadow-green-900/30 transition-all hover:scale-105 active:scale-95"
+          >
+            Pulsuz Başla
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+          <p className="text-zinc-600 text-sm mt-4">
+            Qeydiyyat 30 saniyə çəkir. Heç bir ödəniş lazım deyil.
+          </p>
         </div>
+
       </div>
     </section>
   );
