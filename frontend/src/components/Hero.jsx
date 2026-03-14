@@ -1,22 +1,20 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { ChevronRight, Play } from 'lucide-react';
+import { useLang } from '../context/LanguageContext';
+import { t } from '../lib/translations';
 
 export const Hero = () => {
   const navigate = useNavigate();
+  const { lang } = useLang();
+  const tr = t[lang].hero;
 
   const scrollToPrograms = () => {
-    const element = document.getElementById('programs');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    document.getElementById('programs')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const scrollToHowItWorks = () => {
-    const element = document.getElementById('how-it-works');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -32,7 +30,6 @@ export const Hero = () => {
           alt="Fitness background"
           className="w-full h-full object-cover"
         />
-        {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/80 to-[#0f0f0f]/60" />
       </div>
 
@@ -41,25 +38,24 @@ export const Hero = () => {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-8">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-green-400 text-sm font-medium">Now Accepting New Members</span>
+          <span className="text-green-400 text-sm font-medium">{tr.badge}</span>
         </div>
 
         {/* Headline */}
-        <h1 
+        <h1
           data-testid="hero-headline"
           className="font-heading text-5xl md:text-7xl lg:text-8xl font-bold text-white uppercase tracking-tight mb-6 text-balance"
         >
-          Your Fitness Journey{' '}
-          <span className="text-green-500">Starts Here</span>
+          {tr.headline1}{' '}
+          <span className="text-green-500">{tr.headline2}</span>
         </h1>
 
         {/* Subheadline */}
-        <p 
+        <p
           data-testid="hero-subheadline"
           className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          Beginner-friendly workout programs designed to build real results. 
-          No gym experience needed.
+          {tr.sub}
         </p>
 
         {/* CTA Buttons */}
@@ -69,7 +65,7 @@ export const Hero = () => {
             data-testid="hero-view-programs-btn"
             className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-10 text-lg rounded-full transition-all hover:scale-105 active:scale-95 shadow-lg shadow-green-900/30 group"
           >
-            View Programs
+            {tr.cta1}
             <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
           <Button
@@ -79,7 +75,7 @@ export const Hero = () => {
             className="bg-transparent border-2 border-zinc-700 text-white hover:bg-zinc-800 hover:border-zinc-600 py-6 px-10 text-lg rounded-full transition-all group"
           >
             <Play className="w-5 h-5 mr-2 text-green-500" />
-            Learn More
+            {tr.cta2}
           </Button>
         </div>
 
@@ -87,15 +83,15 @@ export const Hero = () => {
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 mt-16 pt-8 border-t border-zinc-800/50">
           <div className="text-center">
             <p className="font-heading text-4xl md:text-5xl font-bold text-white">10K+</p>
-            <p className="text-zinc-500 text-sm mt-1">Active Members</p>
+            <p className="text-zinc-500 text-sm mt-1">{tr.stat1Label}</p>
           </div>
           <div className="text-center">
             <p className="font-heading text-4xl md:text-5xl font-bold text-white">95%</p>
-            <p className="text-zinc-500 text-sm mt-1">Success Rate</p>
+            <p className="text-zinc-500 text-sm mt-1">{tr.stat2Label}</p>
           </div>
           <div className="text-center">
             <p className="font-heading text-4xl md:text-5xl font-bold text-white">50+</p>
-            <p className="text-zinc-500 text-sm mt-1">Workout Plans</p>
+            <p className="text-zinc-500 text-sm mt-1">{tr.stat3Label}</p>
           </div>
         </div>
       </div>

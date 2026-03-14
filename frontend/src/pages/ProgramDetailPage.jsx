@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle, LayoutDashboard, ChevronDown } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { getProgramContent, PROGRAMS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS, PROGRAMS } from '../data/programs';
 
 const ProgramDetailPage = () => {
   const navigate = useNavigate();
@@ -11,7 +11,6 @@ const ProgramDetailPage = () => {
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedWeeks, setExpandedWeeks] = useState({ 1: true });
 
   const fetchProgress = useCallback(async (userId) => {
     try {
@@ -57,7 +56,14 @@ const ProgramDetailPage = () => {
 
   // Get program data
   const program = PROGRAMS.find(p => p.id === id);
-  const workoutData = getProgramContent(id);
+  const WORKOUT_MAP = {
+    'free-starter': FREE_STARTER_WORKOUTS,
+    'starter': STARTER_WORKOUTS,
+    'transformer': TRANSFORMER_WORKOUTS,
+    'elite-beginner': ELITE_WORKOUTS,
+    'home-beginner': HOME_BEGINNER_WORKOUTS,
+  };
+  const workoutData = WORKOUT_MAP[id] || null;
 
   if (!user) {
     return null;
@@ -85,13 +91,7 @@ const ProgramDetailPage = () => {
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
-
-          <div className="hidden md:flex items-center gap-6">
-            <Link to="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white">Dashboard</Link>
-            <Link to="/my-programs" className="text-sm font-medium text-zinc-400 hover:text-white">My Programs</Link>
-            <Link to="/browse" className="text-sm font-medium text-zinc-400 hover:text-white">Browse</Link>
-          </div>
-
+          
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400">
               <User className="w-5 h-5" />
@@ -151,36 +151,29 @@ const ProgramDetailPage = () => {
               <p className="text-zinc-400">Loading workouts...</p>
             </div>
           ) : workoutData ? (
-            <div className="space-y-4">
-              {workoutData.weeks.map((week) => {
-                const isOpen = !!expandedWeeks[week.week];
-                return (
-                <div key={week.week} className="border border-zinc-800 rounded-xl overflow-hidden">
-                  <button
-                    className="w-full flex items-center justify-between px-6 py-4 bg-zinc-900 hover:bg-zinc-800 transition-colors"
-                    onClick={() => setExpandedWeeks(prev => ({ ...prev, [week.week]: !prev[week.week] }))}
-                  >
-                    <h2 className="font-heading text-xl font-bold text-white uppercase">
-                      Week {week.week}
-                    </h2>
-                    <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isOpen && (
-                  <div className="p-4 space-y-4">
+            <div className="space-y-8">
+              {workoutData.weeks.map((week) => (
+                <div key={week.week}>
+                  <h2 className="font-heading text-xl font-bold text-white uppercase mb-4">
+                    Week {week.week}
+                  </h2>
+                  <div className="space-y-4">
                     {week.days.map((day) => {
                       const completed = isDayCompleted(day.id);
                       return (
                         <div
                           key={day.id}
                           data-testid={`workout-day-${day.id}`}
-                          className={`bg-zinc-900 border rounded-xl p-6 transition-all hover:border-green-500/50 cursor-pointer ${completed ? 'border-green-500/50' : 'border-zinc-800'
-                            }`}
+                          className={`bg-zinc-900 border rounded-xl p-6 transition-all hover:border-green-500/50 cursor-pointer ${
+                            completed ? 'border-green-500/50' : 'border-zinc-800'
+                          }`}
                           onClick={() => navigate(`/program/${id}/day/${day.id}`)}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${completed ? 'bg-green-500/20' : 'bg-zinc-800'
-                                }`}>
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                completed ? 'bg-green-500/20' : 'bg-zinc-800'
+                              }`}>
                                 {completed ? (
                                   <CheckCircle2 className="w-6 h-6 text-green-500" />
                                 ) : (
@@ -195,10 +188,11 @@ const ProgramDetailPage = () => {
                               </div>
                             </div>
                             <Button
-                              className={`rounded-full ${completed
-                                  ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+                              className={`rounded-full ${
+                                completed 
+                                  ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300' 
                                   : 'bg-green-600 hover:bg-green-700 text-white'
-                                }`}
+                              }`}
                               data-testid={`start-day-${day.id}`}
                             >
                               {completed ? 'Review' : 'Start'}
@@ -208,10 +202,8 @@ const ProgramDetailPage = () => {
                       );
                     })}
                   </div>
-                  )}
                 </div>
-                );
-              })}
+              ))}
             </div>
           ) : (
             <div className="text-center py-12 bg-zinc-900/50 rounded-2xl border border-zinc-800">
@@ -222,16 +214,6 @@ const ProgramDetailPage = () => {
               </p>
             </div>
           )}
-          {/* Dashboard CTA */}
-          <div className="mt-10 pt-8 border-t border-zinc-800 flex justify-center">
-            <Button
-              onClick={() => navigate('/dashboard')}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-5 rounded-full font-bold text-base"
-            >
-              <LayoutDashboard className="w-5 h-5 mr-2" />
-              Go to Dashboard
-            </Button>
-          </div>
         </div>
       </main>
     </div>
