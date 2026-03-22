@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper, PlayCircle, ChevronUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS } from '../data/programs';
+import { supabase, getStoredUser } from '../lib/supabase';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS, TWO_DAY_WORKOUTS } from '../data/programs';
+import { getExerciseGif } from '../lib/getExerciseGif';
 
 const DayWorkoutPage = () => {
   const navigate = useNavigate();
@@ -14,6 +15,9 @@ const DayWorkoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState([]);
   const [checked, setChecked] = useState({});
+  const [customPlan, setCustomPlan] = useState(null);
+  const [expandedGif, setExpandedGif] = useState(null);
+  const [weights, setWeights] = useState({});
 
   const toggleExercise = (key) => {
     setChecked(prev => ({ ...prev, [key]: !prev[key] }));
@@ -35,17 +39,29 @@ const DayWorkoutPage = () => {
   }, [id, dayId]);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-
-    if (!userData) {
-      navigate('/login');
-      return;
-    }
-
+    const parsedUser = getStoredUser();
+    if (!parsedUser) { navigate('/login'); return; }
     try {
-      const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       fetchProgress(parsedUser.id);
+
+      if (id.startsWith('custom-')) {
+        const cached = sessionStorage.getItem('customPlans');
+        if (cached) {
+          const plans = JSON.parse(cached);
+          if (plans[id]) { setCustomPlan(plans[id]); return; }
+        }
+        const planId = id.replace('custom-', '');
+        supabase.from('custom_plans').select('*').eq('id', planId).single().then(({ data }) => {
+          if (data?.plan_data) {
+            const plan = typeof data.plan_data === 'string' ? JSON.parse(data.plan_data) : data.plan_data;
+            const full = { ...plan, id };
+            setCustomPlan(full);
+            const existing = cached ? JSON.parse(cached) : {};
+            sessionStorage.setItem('customPlans', JSON.stringify({ ...existing, [id]: full }));
+          }
+        });
+      }
     } catch {
       navigate('/login');
     }
@@ -61,6 +77,13 @@ const DayWorkoutPage = () => {
     setLoading(true);
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
+      // Save weights to localStorage for progress tracking
+      if (Object.keys(weights).length > 0) {
+        const key = `weights_${userData.id}_${id}_${dayId}`;
+        const existing = JSON.parse(localStorage.getItem('workout_weights') || '{}');
+        existing[key] = { weights, completedAt: new Date().toISOString() };
+        localStorage.setItem('workout_weights', JSON.stringify(existing));
+      }
       await supabase.from('progress').upsert({
         user_id: userData.id,
         program_id: id,
@@ -81,13 +104,37 @@ const DayWorkoutPage = () => {
   // Get workout data
   const WORKOUT_MAP = {
     'free-starter': FREE_STARTER_WORKOUTS,
+    'starter-2day': TWO_DAY_WORKOUTS,
     'starter': STARTER_WORKOUTS,
     'transformer': TRANSFORMER_WORKOUTS,
     'elite-beginner': ELITE_WORKOUTS,
+    'home-beginner': HOME_BEGINNER_WORKOUTS,
   };
-  const workoutData = WORKOUT_MAP[id] || null;
-  const allDays = workoutData?.weeks.flatMap(w => w.days) || [];
+  const workoutData = id.startsWith('custom-') ? customPlan : (WORKOUT_MAP[id] || null);
+  const allDays = workoutData?.weeks?.flatMap(w => w.days) || [];
   const dayData = allDays.find(d => d.id === dayId);
+
+  // Equipment-adaptive exercise resolver (for home programs)
+  const userEquipment = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('fitstart_equipment') || '["bodyweight"]');
+    } catch {
+      return ['bodyweight'];
+    }
+  })();
+  const resolveExercise = (ex) => {
+    if (!ex.equipment) return ex;
+    const equips = Array.isArray(ex.equipment) ? ex.equipment : [ex.equipment];
+    if (equips.some(e => userEquipment.includes(e))) return ex;
+    if (ex.alternatives && ex.alternatives.length > 0) {
+      for (const alt of ex.alternatives) {
+        const altEquips = Array.isArray(alt.equipment) ? alt.equipment : [alt.equipment];
+        if (altEquips.some(e => userEquipment.includes(e))) return alt;
+      }
+      return ex.alternatives[ex.alternatives.length - 1];
+    }
+    return ex;
+  };
 
   // Calculate if all exercises are checked
   const totalExercises = dayData
@@ -271,39 +318,86 @@ const DayWorkoutPage = () => {
               <h2 className="font-heading text-lg font-bold text-white uppercase">Main Workout</h2>
             </div>
             <div className="space-y-4">
-              {dayData.mainWorkout.map((exercise, index) => {
+              {dayData.mainWorkout.map((rawExercise, index) => {
+                const exercise = resolveExercise(rawExercise);
                 const key = `main-${index}`;
                 const done = !!checked[key];
                 return (
                   <div
                     key={index}
                     data-testid={`exercise-card-${index}`}
-                    onClick={() => toggleExercise(key)}
-                    className={`rounded-xl p-5 cursor-pointer select-none transition-all ${
+                    className={`rounded-xl p-5 select-none transition-all ${
                       done
                         ? 'bg-green-500/10 border border-green-500/30'
                         : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
                     }`}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
-                          done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
-                        }`}>
-                          {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => toggleExercise(key)}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+                            done ? 'bg-green-500 border-green-500' : 'border-zinc-600'
+                          }`}>
+                            {done && <CheckCircle2 className="w-4 h-4 text-white" />}
+                          </div>
+                          <h3 className={`font-semibold text-lg transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                            {exercise.name}
+                          </h3>
                         </div>
-                        <h3 className={`font-semibold text-lg transition-all ${done ? 'text-zinc-500 line-through' : 'text-white'}`}>
-                          {exercise.name}
-                        </h3>
+                        <div className="flex items-center gap-1 text-zinc-500 text-sm">
+                          <Clock className="w-4 h-4" />
+                          <span>Rest {exercise.rest}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-zinc-500 text-sm">
-                        <Clock className="w-4 h-4" />
-                        <span>Rest {exercise.rest}</span>
-                      </div>
+                      <p className={`font-medium mb-2 ml-9 ${done ? 'text-zinc-600' : 'text-green-400'}`}>
+                        {exercise.sets} sets × {exercise.reps} {typeof exercise.reps === 'number' ? 'reps' : ''}
+                      </p>
                     </div>
-                    <p className={`font-medium mb-2 ml-9 ${done ? 'text-zinc-600' : 'text-green-400'}`}>
-                      {exercise.sets} sets × {exercise.reps} {typeof exercise.reps === 'number' ? 'reps' : ''}
-                    </p>
+                    {/* GIF toggle */}
+                    {(() => {
+                      const gifUrl = getExerciseGif(exercise.name);
+                      if (!gifUrl) return null;
+                      const isOpen = expandedGif === `${index}-${exercise.name}`;
+                      return (
+                        <div className="mt-2 ml-9">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedGif(isOpen ? null : `${index}-${exercise.name}`);
+                            }}
+                            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-green-400 transition-colors"
+                          >
+                            {isOpen
+                              ? <><ChevronUp className="w-3.5 h-3.5" /> Hide GIF</>
+                              : <><PlayCircle className="w-3.5 h-3.5" /> Show GIF</>
+                            }
+                          </button>
+                          {isOpen && (
+                            <div className="mt-3 rounded-xl overflow-hidden border border-zinc-700">
+                              <img
+                                src={gifUrl}
+                                alt={exercise.name}
+                                className="w-full max-h-64 object-contain bg-zinc-950"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {/* Weight input */}
+                    <div className="mt-3 ml-9" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={weights[key] || ''}
+                        onChange={e => setWeights(prev => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={exercise.weight ? `Suggested: ${exercise.weight}` : 'Log weight (e.g. 20 kg)'}
+                        className="w-full max-w-xs bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-3 py-1.5 placeholder-zinc-600 focus:outline-none focus:border-green-500 transition-colors"
+                      />
+                    </div>
                     {exercise.tip && (
                       <div className="flex items-start gap-2 mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                         <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />

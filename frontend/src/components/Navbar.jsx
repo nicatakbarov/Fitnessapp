@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Dumbbell } from 'lucide-react';
 import { Button } from './ui/button';
+import { useLang } from '../context/LanguageContext';
+import { t } from '../lib/translations';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { lang, toggleLang } = useLang();
+  const tr = t[lang].navbar;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,8 +37,8 @@ export const Navbar = () => {
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           data-testid="navbar-logo"
           className="flex items-center gap-2 text-white hover:text-green-500 transition-colors"
         >
@@ -49,51 +53,72 @@ export const Navbar = () => {
             data-testid="nav-home"
             className="text-zinc-400 hover:text-white transition-colors font-medium"
           >
-            Home
+            {tr.home}
           </button>
           <button
             onClick={() => scrollToSection('programs')}
             data-testid="nav-programs"
             className="text-zinc-400 hover:text-white transition-colors font-medium"
           >
-            Programs
+            {tr.programs}
           </button>
           <button
             onClick={() => scrollToSection('faq')}
             data-testid="nav-faq"
             className="text-zinc-400 hover:text-white transition-colors font-medium"
           >
-            FAQ
+            {tr.faq}
           </button>
         </div>
 
-        {/* Auth Buttons */}
-        <div className="hidden md:flex items-center gap-4">
+        {/* Auth Buttons + Lang Toggle */}
+        <div className="hidden md:flex items-center gap-3">
+          {/* Language Toggle */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all text-sm font-semibold"
+            title="Switch language"
+          >
+            <span className={lang === 'az' ? 'text-green-400' : 'text-zinc-500'}>AZ</span>
+            <span className="text-zinc-700">|</span>
+            <span className={lang === 'en' ? 'text-green-400' : 'text-zinc-500'}>EN</span>
+          </button>
+
           <Button
             variant="ghost"
             onClick={() => navigate('/login')}
             data-testid="nav-login-btn"
             className="text-zinc-300 hover:text-white hover:bg-zinc-800"
           >
-            Login
+            {tr.login}
           </Button>
           <Button
             onClick={() => navigate('/register')}
             data-testid="nav-get-started-btn"
             className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 rounded-full transition-all hover:scale-105"
           >
-            Get Started
+            {tr.getStarted}
           </Button>
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          data-testid="mobile-menu-btn"
-          className="md:hidden text-white p-2"
-        >
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Mobile: lang toggle + menu button */}
+        <div className="md:hidden flex items-center gap-2">
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-zinc-700 text-zinc-400 hover:text-white text-xs font-semibold"
+          >
+            <span className={lang === 'az' ? 'text-green-400' : 'text-zinc-500'}>AZ</span>
+            <span className="text-zinc-700">|</span>
+            <span className={lang === 'en' ? 'text-green-400' : 'text-zinc-500'}>EN</span>
+          </button>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            data-testid="mobile-menu-btn"
+            className="text-white p-2"
+          >
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
@@ -104,19 +129,19 @@ export const Navbar = () => {
               onClick={() => scrollToSection('hero')}
               className="text-zinc-300 hover:text-white py-2 text-left"
             >
-              Home
+              {tr.home}
             </button>
             <button
               onClick={() => scrollToSection('programs')}
               className="text-zinc-300 hover:text-white py-2 text-left"
             >
-              Programs
+              {tr.programs}
             </button>
             <button
               onClick={() => scrollToSection('faq')}
               className="text-zinc-300 hover:text-white py-2 text-left"
             >
-              FAQ
+              {tr.faq}
             </button>
             <div className="flex flex-col gap-2 pt-4 border-t border-zinc-800">
               <Button
@@ -124,13 +149,13 @@ export const Navbar = () => {
                 onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}
                 className="w-full justify-center text-zinc-300"
               >
-                Login
+                {tr.login}
               </Button>
               <Button
                 onClick={() => { navigate('/register'); setIsMobileMenuOpen(false); }}
                 className="w-full justify-center bg-green-600 hover:bg-green-700"
               >
-                Get Started
+                {tr.getStarted}
               </Button>
             </div>
           </div>

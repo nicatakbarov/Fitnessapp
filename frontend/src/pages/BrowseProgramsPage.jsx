@@ -1,44 +1,58 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, Check, Zap, Star, Gift } from 'lucide-react';
+import { Dumbbell, LogOut, User, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { PROGRAMS } from '../data/programs';
-import { supabase } from '../lib/supabase';
+import { supabase, getStoredUser } from '../lib/supabase';
+
+const GYM_PLANS = [
+  {
+    id: 'starter-2day',
+    days: 2,
+    label: '2x per week',
+    name: '2-Day Gym Starter',
+    description: 'Upper/Lower split · 4 weeks · Machine-friendly',
+    details: ['Great if you\'re just starting out', 'Upper body Monday, Lower body Friday', 'Machine-based — no technique overwhelm', '4-week progressive plan'],
+    recommended: false,
+  },
+  {
+    id: 'starter',
+    days: 3,
+    label: '3x per week',
+    name: 'Gym Starter',
+    description: 'Push/Pull/Legs · 4 weeks · Progressive overload',
+    details: ['Most popular for beginners', 'Push / Pull / Legs split', 'Built-in weight progression each week', '4-week structured program'],
+    recommended: true,
+  },
+  {
+    id: 'elite-beginner',
+    days: 5,
+    label: '5x per week',
+    name: 'Elite Beginner',
+    description: 'Push/Pull/Legs/Shoulders/Full · 9 weeks · 3-phase',
+    details: ['Best if you can commit to 5 days', '5-day split for full body coverage', '3-phase progression over 9 weeks', 'Serious results for dedicated beginners'],
+    recommended: false,
+  },
+];
 
 const BrowseProgramsPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [selected, setSelected] = useState('starter');
   const [loading, setLoading] = useState(false);
   const [ownedPrograms, setOwnedPrograms] = useState([]);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-
-    if (!userData) {
-      navigate('/login');
-      return;
-    }
-
+    const parsedUser = getStoredUser();
+    if (!parsedUser) { navigate('/login'); return; }
     try {
-      const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      fetchPurchases(parsedUser.id);
+      supabase.from('purchases').select('program_id').eq('user_id', parsedUser.id).then(({ data }) => {
+        setOwnedPrograms((data || []).map(p => p.program_id));
+      });
     } catch {
       navigate('/login');
     }
   }, [navigate]);
-
-  const fetchPurchases = async (userId) => {
-    try {
-      const { data } = await supabase
-        .from('purchases')
-        .select('*')
-        .eq('user_id', userId);
-      setOwnedPrograms((data || []).map(p => p.program_id));
-    } catch (err) {
-      console.error('Failed to fetch purchases:', err);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -46,35 +60,37 @@ const BrowseProgramsPage = () => {
     navigate('/');
   };
 
-  const handleGetProgram = async (program) => {
-    if (ownedPrograms.includes(program.id)) {
+  const handleEnroll = async () => {
+    const plan = GYM_PLANS.find(p => p.id === selected);
+    if (!plan || !user) return;
+
+    if (ownedPrograms.includes(plan.id)) {
       navigate('/my-programs');
       return;
     }
 
-    if (program.isFree) {
-      setLoading(true);
-      try {
-        const userData = JSON.parse(localStorage.getItem('user'));
-        const { error } = await supabase.from('purchases').insert({
-          user_id: userData.id,
-          program_id: program.id,
-          program_name: program.name,
-          price: 0,
-        });
-        if (error) throw error;
-        navigate('/my-programs');
-      } catch (err) {
-        alert('Failed to get program');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      alert(`Checkout for ${program.name} ($${program.price}) coming soon!`);
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('purchases').insert({
+        user_id: user.id,
+        program_id: plan.id,
+        program_name: plan.name,
+        price: 0,
+        status: 'active',
+      });
+      if (error) throw error;
+      navigate('/my-programs');
+    } catch (err) {
+      alert('Failed to enroll. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!user) return null;
+
+  const selectedPlan = GYM_PLANS.find(p => p.id === selected);
+  const isOwned = ownedPrograms.includes(selected);
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="browse-programs-page">
@@ -85,159 +101,102 @@ const BrowseProgramsPage = () => {
             <Dumbbell className="w-8 h-8 text-green-500" />
             <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
           </Link>
-          
           <div className="hidden md:flex items-center gap-6">
             <Link to="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white">Dashboard</Link>
             <Link to="/my-programs" className="text-sm font-medium text-zinc-400 hover:text-white">My Programs</Link>
             <Link to="/progress" className="text-sm font-medium text-zinc-400 hover:text-white">Progress</Link>
-            <Link to="/nutrition" className="text-sm font-medium text-zinc-400 hover:text-white">Nutrition</Link>
           </div>
-          
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-zinc-400">
               <User className="w-5 h-5" />
               <span className="hidden sm:inline text-sm">{user.name}</span>
             </div>
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              size="sm"
-              className="text-zinc-400 hover:text-white hover:bg-zinc-800"
-            >
+            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-zinc-800">
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="pt-24 pb-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-12 text-center">
+      <main className="pt-24 pb-16 px-4 md:px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-10">
             <h1 className="font-heading text-3xl md:text-4xl font-bold text-white uppercase mb-2">
-              Browse Programs
+              Gym Plan
             </h1>
-            <p className="text-zinc-400">
-              Choose a program that fits your fitness goals.
-            </p>
+            <p className="text-zinc-400">How many days per week can you train?</p>
           </div>
 
-          {/* Program Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PROGRAMS.map((program, index) => {
-              const isOwned = ownedPrograms.includes(program.id);
-              
-              return (
-                <div
-                  key={index}
-                  data-testid={`browse-program-card-${program.id}`}
-                  className={`relative flex flex-col rounded-3xl p-6 transition-all duration-300 hover:-translate-y-2 ${
-                    program.isFree
-                      ? 'bg-gradient-to-b from-emerald-500/20 to-zinc-900 border-2 border-emerald-500 shadow-[0_0_40px_-10px_rgba(16,185,129,0.4)]'
-                      : program.popular
-                      ? 'bg-gradient-to-b from-green-500/10 to-zinc-900 border-2 border-green-500 shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)]'
-                      : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700'
-                  }`}
-                >
-                  {/* Badge */}
-                  {program.isFree && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <div className="flex items-center gap-1 px-4 py-1 rounded-full bg-emerald-500 text-black text-xs font-bold uppercase">
-                        <Gift className="w-3 h-3" />
-                        FREE
-                      </div>
-                    </div>
-                  )}
-                  {program.popular && !program.isFree && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <div className="flex items-center gap-1 px-4 py-1 rounded-full bg-green-500 text-black text-xs font-bold uppercase">
-                        <Star className="w-3 h-3 fill-current" />
-                        Most Popular
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Program Name */}
-                  <h3 className="font-heading text-xl font-bold text-white uppercase mb-2 mt-2">
-                    {program.name}
-                  </h3>
-
-                  {/* Price */}
-                  <div className="flex items-baseline gap-1 mb-4">
-                    {program.isFree ? (
-                      <span className="font-heading text-4xl font-bold text-emerald-400">FREE</span>
-                    ) : (
-                      <>
-                        <span className="text-zinc-500">$</span>
-                        <span className="font-heading text-4xl font-bold text-white">{program.price}</span>
-                      </>
-                    )}
+          {/* Frequency picker */}
+          <div className="space-y-3 mb-8">
+            {GYM_PLANS.map(plan => (
+              <button
+                key={plan.id}
+                onClick={() => setSelected(plan.id)}
+                className={`w-full flex items-center justify-between px-5 py-4 rounded-xl border-2 transition-all text-left ${
+                  selected === plan.id
+                    ? 'bg-green-500/10 border-green-500'
+                    : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-600'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-3 mb-0.5">
+                    <span className={`font-heading text-2xl font-bold ${selected === plan.id ? 'text-green-400' : 'text-white'}`}>
+                      {plan.days}x
+                    </span>
+                    <span className={`text-sm font-medium ${selected === plan.id ? 'text-green-400' : 'text-zinc-300'}`}>
+                      per week
+                      {plan.recommended && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                          Recommended
+                        </span>
+                      )}
+                      {ownedPrograms.includes(plan.id) && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-zinc-700 text-zinc-300 border border-zinc-600">
+                          Enrolled
+                        </span>
+                      )}
+                    </span>
                   </div>
-
-                  {/* Details */}
-                  <div className="space-y-2 mb-4 pb-4 border-b border-zinc-800 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-500">Duration</span>
-                      <span className="text-white font-medium">{program.duration}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-500">Frequency</span>
-                      <span className="text-white font-medium">{program.frequency}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-500">Level</span>
-                      <span className="text-white font-medium">{program.level}</span>
-                    </div>
-                  </div>
-
-                  {/* Features */}
-                  <ul className="space-y-2 mb-6 flex-grow">
-                    {program.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start gap-2">
-                        <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${program.isFree ? 'text-emerald-400' : 'text-green-500'}`} />
-                        <span className="text-zinc-300 text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA */}
-                  <Button
-                    onClick={() => handleGetProgram(program)}
-                    disabled={loading}
-                    className={`w-full py-5 rounded-full font-bold text-sm transition-all hover:scale-105 active:scale-95 ${
-                      isOwned
-                        ? 'bg-zinc-700 hover:bg-zinc-600 text-white'
-                        : program.isFree
-                        ? 'bg-emerald-500 hover:bg-emerald-600 text-black shadow-lg shadow-emerald-900/30'
-                        : program.popular
-                        ? 'bg-green-500 hover:bg-green-600 text-black shadow-lg shadow-green-900/30'
-                        : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                    }`}
-                  >
-                    {isOwned ? (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Owned - View
-                      </>
-                    ) : program.isFree ? (
-                      <>
-                        <Gift className="w-4 h-4 mr-2" />
-                        {program.cta}
-                      </>
-                    ) : program.popular ? (
-                      <>
-                        <Zap className="w-4 h-4 mr-2 fill-current" />
-                        {program.cta}
-                      </>
-                    ) : (
-                      program.cta
-                    )}
-                  </Button>
+                  <p className="text-xs text-zinc-500">{plan.description}</p>
                 </div>
-              );
-            })}
+                <div className={`w-6 h-6 rounded-full flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
+                  selected === plan.id ? 'border-green-500 bg-green-500' : 'border-zinc-600'
+                }`}>
+                  {selected === plan.id && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
+                </div>
+              </button>
+            ))}
           </div>
+
+          {/* Plan details */}
+          {selectedPlan && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mb-6">
+              <h3 className="font-heading text-lg font-bold text-white uppercase mb-3">{selectedPlan.name}</h3>
+              <ul className="space-y-2">
+                {selectedPlan.details.map((d, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <Button
+            onClick={handleEnroll}
+            disabled={loading}
+            className="w-full py-6 rounded-full bg-green-600 hover:bg-green-700 text-white font-bold text-base disabled:opacity-50"
+          >
+            {loading ? (
+              <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Starting your program...</>
+            ) : isOwned ? (
+              'View My Programs'
+            ) : (
+              `Start ${selectedPlan?.days}x/week Program`
+            )}
+          </Button>
         </div>
       </main>
     </div>

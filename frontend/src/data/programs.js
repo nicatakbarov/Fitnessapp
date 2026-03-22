@@ -7,6 +7,7 @@ export const PROGRAMS = [
     duration: '1 week',
     frequency: '3x per week',
     level: 'Beginner',
+    type: 'gym',
     features: [
       '3 sample gym workouts',
       'Basic nutrition tips',
@@ -17,59 +18,76 @@ export const PROGRAMS = [
     cta: 'Get Free Access',
   },
   {
+    id: 'starter-2day',
+    name: '2-Day Gym Starter',
+    price: 0,
+    duration: '4 weeks',
+    frequency: '2x per week',
+    level: 'Beginner',
+    type: 'gym',
+    features: [
+      'Upper/Lower split',
+      'Machine-based — beginner friendly',
+      '4-week progressive plan',
+      'Weight progression guidance',
+    ],
+    popular: false,
+    isFree: true,
+    cta: 'Start',
+  },
+  {
     id: 'starter',
-    name: 'Starter',
-    price: 19,
+    name: 'Gym Starter',
+    price: 0,
     duration: '4 weeks',
     frequency: '3x per week',
     level: 'Beginner',
+    type: 'gym',
     features: [
-      'Push / Pull / Legs split',
-      'Machine + dumbbell progression',
-      'Warm-up & cool-down routines',
-      'Beginner nutrition guide',
-      'Email support',
-    ],
-    popular: false,
-    isFree: false,
-    cta: 'Get Starter',
-  },
-  {
-    id: 'transformer',
-    name: 'Transformer',
-    price: 39,
-    duration: '8 weeks',
-    frequency: '4x per week',
-    level: 'Beginner–Intermediate',
-    features: [
-      'Upper / Lower split',
-      'Progressive overload system',
-      'Barbell & machine library',
-      'Complete meal plan',
-      'Weekly check-ins',
-      'Private community access',
+      'Push/Pull/Legs split',
+      'Progressive overload built in',
+      '4-week program',
+      'Weight progression guidance',
     ],
     popular: true,
-    isFree: false,
-    cta: 'Get Transformer',
+    isFree: true,
+    cta: 'Start',
   },
   {
     id: 'elite-beginner',
     name: 'Elite Beginner',
-    price: 59,
-    duration: '12 weeks',
+    price: 0,
+    duration: '9 weeks',
     frequency: '5x per week',
-    level: 'Full beginner system',
+    level: 'Beginner',
+    type: 'gym',
     features: [
-      'Push / Pull / Legs + specialisation',
-      '4-phase periodisation',
-      'Advanced nutrition protocols',
-      'Priority support',
-      'Lifetime access to updates',
+      '5-day Push/Pull/Legs/Shoulders/Full',
+      '3-phase progression',
+      '9-week program',
+      'Full body coverage',
     ],
     popular: false,
-    isFree: false,
-    cta: 'Get Elite',
+    isFree: true,
+    cta: 'Start',
+  },
+  {
+    id: 'home-beginner',
+    name: 'Home Beginner',
+    price: 0,
+    duration: '4 weeks',
+    frequency: '3x per week',
+    level: 'Beginner',
+    type: 'home',
+    features: [
+      'Equipment-friendly exercises',
+      'Bodyweight alternatives',
+      'Daily progress tracking',
+      'Full program without gym',
+    ],
+    popular: false,
+    isFree: true,
+    cta: 'Start',
   },
 ];
 
@@ -971,5 +989,394 @@ export const ELITE_WORKOUTS = {
     { week: 10, days: [elitePush(10,5,8,null), elitePull(10,5,8,null), eliteLegs(10,5,8,null), eliteShoulders(10,5,8,null), eliteFullBody(10,5,8,null)] },
     { week: 11, days: [elitePush(11,5,8,'Add 2.5 kg vs W10'), elitePull(11,5,8,'Add 2.5 kg vs W10'), eliteLegs(11,5,8,'Add 5 kg vs W10'), eliteShoulders(11,5,8,'Add 2.5 kg vs W10'), eliteFullBody(11,5,8,'Add 2.5 kg vs W10')] },
     { week: 12, days: [elitePush(12,5,8,'Add 2.5 kg vs W11'), elitePull(12,5,8,'Add 2.5 kg vs W11'), eliteLegs(12,5,8,'Add 5 kg vs W11'), eliteShoulders(12,5,8,'Add 2.5 kg vs W11'), eliteFullBody(12,5,8,'Add 2.5 kg vs W11')] },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────
+// HOME BEGINNER  (4 weeks · 3 days · equipment-adaptive)
+// Each main exercise has: equipment + alternatives[]
+// resolveExercise() in DayWorkoutPage picks the best variant
+// ─────────────────────────────────────────────────────────
+
+// Equipment-aware exercise builders
+const hEx = (name, equipment, sets, reps, rest, tip, alternatives) => ({
+  name, equipment, sets, reps, rest, tip, alternatives,
+});
+
+// ── Upper Body Day ──
+function homeUpper(week, sets, reps, addNote) {
+  const w = week;
+  const noteStr = addNote ? ` (${addNote})` : '';
+  return {
+    id: `hw${w}-d1`,
+    dayNumber: (w - 1) * 3 + 1,
+    dayName: 'Monday',
+    title: 'Upper Body' + noteStr,
+    warmup: {
+      duration: '5 min',
+      exercises: [
+        { name: 'Arm Circles', reps: '15 reps' },
+        { name: 'Chest Opener Stretch', duration: '30 sec' },
+        { name: 'Arm Swings', reps: '20 reps' },
+      ],
+    },
+    mainWorkout: [
+      hEx('Dumbbell Chest Press', 'dumbbells', sets, reps, '75 sec',
+        'Dirsəkləri 45° saxla, nəfəsi buraxaraq qaldır.',
+        [
+          { equipment: 'resistance_bands', name: 'Resistance Band Press', sets, reps, rest: '75 sec', tip: 'Lenti arxada bağla, əlləri irəli it.' },
+          { equipment: 'bodyweight', name: 'Push-up', sets, reps, rest: '75 sec', tip: 'Bədənini düz saxla, sinəni yerə yaxınlaşdır.' },
+        ]),
+      hEx('Dumbbell Row', 'dumbbells', sets, reps, '75 sec',
+        'Arxa düz, dirsəyi yuxarı çək.',
+        [
+          { equipment: 'resistance_bands', name: 'Resistance Band Row', sets, reps, rest: '75 sec', tip: 'Lentin ortasını ayağının altına bas.' },
+          { equipment: 'bodyweight', name: 'Table Row (inverted)', sets, reps, rest: '75 sec', tip: 'Stol altına uzan, sinəni stolun altına doğru çək.' },
+        ]),
+      hEx('Dumbbell Shoulder Press', 'dumbbells', sets, reps, '60 sec',
+        'Dirsəkləri 90° bük, yuxarı it.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Shoulder Press', sets, reps, rest: '60 sec', tip: 'Lenti ayaqlarının altında saxla.' },
+          { equipment: 'bodyweight', name: 'Pike Push-up', sets, reps, rest: '60 sec', tip: 'Ombanı yuxarı qaldır, baş aşağıya doğru get.' },
+        ]),
+      hEx('Dumbbell Bicep Curl', 'dumbbells', sets, reps, '60 sec',
+        'Dirsəyi sabit saxla, yalnız biləyi hərəkət etdir.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Bicep Curl', sets, reps, rest: '60 sec', tip: 'Lenti ayaqlarının altında saxla, yavaş-yavaş qaldır.' },
+          { equipment: 'bodyweight', name: 'Isometric Bicep Hold', sets, reps: '30 sec', rest: '60 sec', tip: 'Masa kənarından aşağıdan tut, yuxarı itdir.' },
+        ]),
+      hEx('Dumbbell Tricep Extension', 'dumbbells', sets, reps, '60 sec',
+        'Dirsəkləri yuxarıda sabit tut, yalnız biləkdən aşağı en.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Tricep Pushdown', sets, reps, rest: '60 sec', tip: 'Lendi qapıya bağla, aşağıya bas.' },
+          { equipment: 'bodyweight', name: 'Diamond Push-up', sets, reps, rest: '60 sec', tip: 'Əlləri elmas formasında qoy, dirsəkləri arxaya doğru bük.' },
+        ]),
+    ],
+    cooldown: {
+      duration: '5 min',
+      exercises: [
+        { name: 'Chest Doorframe Stretch', duration: '30 sec each side' },
+        { name: 'Upper Back Stretch', duration: '30 sec' },
+        { name: 'Neck Stretch', duration: '20 sec each side' },
+      ],
+    },
+  };
+}
+
+// ── Lower Body Day ──
+function homeLower(week, sets, reps, addNote) {
+  const w = week;
+  const noteStr = addNote ? ` (${addNote})` : '';
+  return {
+    id: `hw${w}-d2`,
+    dayNumber: (w - 1) * 3 + 2,
+    dayName: 'Wednesday',
+    title: 'Lower Body' + noteStr,
+    warmup: {
+      duration: '5 min',
+      exercises: [
+        { name: 'Deep Squat Stretch', duration: '30 sec' },
+        { name: 'Leg Swings', reps: '15 reps' },
+        { name: 'Hip Circles', reps: '10 each side' },
+      ],
+    },
+    mainWorkout: [
+      hEx('Goblet Squat (dumbbells)', 'dumbbells', sets, reps, '75 sec',
+        'Çəkini sinənin qarşısında tut, topuqlar yerdə qalsın.',
+        [
+          { equipment: 'resistance_bands', name: 'Resistance Band Squat', sets, reps, rest: '75 sec', tip: 'Lenti ayaqlarının üstündən keçir, omuzlara al.' },
+          { equipment: 'bodyweight', name: 'Bodyweight Squat', sets, reps, rest: '75 sec', tip: 'Diz barmaq ucunu keçməsin, arxa düz.' },
+        ]),
+      hEx('Romanian Deadlift (dumbbells)', 'dumbbells', sets, reps, '75 sec',
+        'Arxa düz, çəkilər baldırın yanında aşağı en.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Romanian Deadlift', sets, reps, rest: '75 sec', tip: 'Lenti ayaqlarının altına bas, əllər irəli bax.' },
+          { equipment: 'bodyweight', name: 'Single-leg RDL', sets, reps, rest: '75 sec', tip: 'Bir ayaq havaya qaldır, öndə əyil.' },
+        ]),
+      hEx('Dumbbell Hip Thrust', 'dumbbells', sets, reps, '60 sec',
+        'Çəkini qarnın üstünə qoy, çanağı yuxarı it.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Hip Thrust', sets, reps, rest: '60 sec', tip: 'Lenti dizlərinin üstünə keçir.' },
+          { equipment: 'bodyweight', name: 'Glute Bridge', sets, reps, rest: '60 sec', tip: 'Kürəyini yerdə saxla, yalnız çanağı qaldır.' },
+        ]),
+      hEx('Weighted Lunge (dumbbells)', 'dumbbells', sets, `${reps} each leg`, '60 sec',
+        'Addım at, ön diz 90°, arxa diz yerə yaxınlaş.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Lunge', sets, reps: `${reps} each leg`, rest: '60 sec', tip: 'Lenti ayaqlarının altında tut.' },
+          { equipment: 'bodyweight', name: 'Bodyweight Lunge', sets, reps: `${reps} each leg`, rest: '60 sec', tip: 'Dizi yerə vurmadan dayanmağa çalış.' },
+        ]),
+      hEx('Weighted Calf Raise (dumbbells)', 'dumbbells', sets, reps, '45 sec',
+        'Çəkiləri tut, ayaq uclarına qalx.',
+        [
+          { equipment: 'bodyweight', name: 'Bodyweight Calf Raise', sets, reps: `${reps} slow`, rest: '45 sec', tip: 'Yavaş enib-qalx, 2 san tuta.' },
+        ]),
+    ],
+    cooldown: {
+      duration: '5 min',
+      exercises: [
+        { name: 'Quad Stretch', duration: '30 sec each side' },
+        { name: 'Seated Hamstring Stretch', duration: '30 sec each side' },
+        { name: 'Calf Stretch', duration: '30 sec each side' },
+      ],
+    },
+  };
+}
+
+// ── Full Body Day ──
+function homeFullBody(week, sets, reps, addNote) {
+  const w = week;
+  const noteStr = addNote ? ` (${addNote})` : '';
+  return {
+    id: `hw${w}-d3`,
+    dayNumber: (w - 1) * 3 + 3,
+    dayName: 'Friday',
+    title: 'Full Body' + noteStr,
+    warmup: {
+      duration: '5 min',
+      exercises: [
+        { name: 'Jumping Jacks', reps: '30 reps' },
+        { name: 'Torso Rotations', reps: '10 each side' },
+        { name: 'High Knees', duration: '30 sec' },
+      ],
+    },
+    mainWorkout: [
+      hEx('Dumbbell Thruster', 'dumbbells', sets, reps, '90 sec',
+        'Çömbəl + ayağa qalx + yuxarıya it — bir hərəkətdə.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Thruster', sets, reps, rest: '90 sec', tip: 'Lenti ayaqlarının altında tut, çömbəl + it.' },
+          { equipment: 'bodyweight', name: 'Squat + Overhead Reach', sets, reps, rest: '90 sec', tip: 'Çömbəl, qalx, əlləri yuxarı uzan.' },
+        ]),
+      hEx('Renegade Row (dumbbells)', 'dumbbells', sets, `${reps} each side`, '75 sec',
+        'Planke vəziyyətdə, bir əllə çəkini çək.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Pull-apart', sets, reps, rest: '75 sec', tip: 'Lenti sinə hündürlüyündə tut, iki tərəfə çək.' },
+          { equipment: 'bodyweight', name: 'Superman Hold', sets, reps: '30 sec', rest: '75 sec', tip: 'Üzüqoylu uzan, əl və ayaqları eyni vaxtda qaldır.' },
+        ]),
+      hEx('Dumbbell Romanian Deadlift + Row', 'dumbbells', sets, reps, '75 sec',
+        'Əyil (RDL), sonra hər iki çəkini çək — birləşik hərəkət.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Deadlift + Row', sets, reps, rest: '75 sec', tip: 'Lenti ayaqların altında tut.' },
+          { equipment: 'bodyweight', name: 'Good Morning + Bodyweight Row', sets, reps, rest: '75 sec', tip: 'Əyil, düzəl, sonra masa altında çəkil.' },
+        ]),
+      hEx('Dumbbell Step-up', 'dumbbells', sets, `${reps} each leg`, '60 sec',
+        'Stul/pilləkən üzərinə addım at, tam düzəl.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Step-up', sets, reps: `${reps} each leg`, rest: '60 sec', tip: 'Lenti omuzda tut.' },
+          { equipment: 'bodyweight', name: 'Bodyweight Step-up', sets, reps: `${reps} each leg`, rest: '60 sec', tip: 'Stabilliyə diqqət et.' },
+        ]),
+      hEx('Dumbbell Russian Twist', 'dumbbells', sets, `${reps} each side`, '45 sec',
+        'Otur, ayaqları bir az havaya qaldır, çəkini bir tərəfdən digərinə apar.',
+        [
+          { equipment: 'resistance_bands', name: 'Band Woodchop', sets, reps: `${reps} each side`, rest: '45 sec', tip: 'Lenti yuxarı tərəfə bağla.' },
+          { equipment: 'bodyweight', name: 'Russian Twist', sets, reps: `${reps} each side`, rest: '45 sec', tip: 'Əlləri birləşdir, tərəflərə döndər.' },
+        ]),
+    ],
+    cooldown: {
+      duration: '5 min',
+      exercises: [
+        { name: 'Child\'s Pose', duration: '45 sec' },
+        { name: 'Figure-4 Hip Stretch', duration: '30 sec each side' },
+        { name: 'Full Body Stretch', duration: '30 sec' },
+      ],
+    },
+  };
+}
+
+// Fix lunge reps object issue — use direct string
+function homeLowerFixed(week, sets, reps, addNote) {
+  const day = homeLower(week, sets, reps, addNote);
+  // Fix the lunge exercise alternatives reps field
+  day.mainWorkout[3] = hEx(
+    'Weighted Lunge (dumbbells)', 'dumbbells', sets, `${reps} each leg`, '60 sec',
+    'Addım at, ön diz 90°, arxa diz yerə yaxınlaş.',
+    [
+      { equipment: 'resistance_bands', name: 'Band Lunge', sets, reps: `${reps} each leg`, rest: '60 sec', tip: 'Lenti ayaqlarının altında tut.' },
+      { equipment: 'bodyweight', name: 'Bodyweight Lunge', sets, reps: `${reps} each leg`, rest: '60 sec', tip: 'Dizi yerə vurmadan dayanmağa çalış.' },
+    ]
+  );
+  return day;
+}
+
+export const HOME_BEGINNER_WORKOUTS = {
+  id: 'home-beginner',
+  name: 'Home Beginner',
+  weeks: [
+    // Phase 1 – Foundation (W1-2) 3×12
+    { week: 1, days: [homeUpper(1,3,12,null), homeLowerFixed(1,3,12,null), homeFullBody(1,3,12,null)] },
+    { week: 2, days: [homeUpper(2,3,12,'Increase difficulty'), homeLowerFixed(2,3,12,'Increase difficulty'), homeFullBody(2,3,12,'Increase difficulty')] },
+    // Phase 2 – Build (W3-4) 4×10
+    { week: 3, days: [homeUpper(3,4,10,null), homeLowerFixed(3,4,10,null), homeFullBody(3,4,10,null)] },
+    { week: 4, days: [homeUpper(4,4,10,'Final week – maximum'), homeLowerFixed(4,4,10,'Final week – maximum'), homeFullBody(4,4,10,'Final week – maximum')] },
+  ],
+};
+
+// ─────────────────────────────────────────────
+// EQUIPMENT DATABASE (for Custom Plan Builder)
+// ─────────────────────────────────────────────
+export const EQUIPMENT_DB = [
+  // ── Kardio Aparatları ──────────────────────────────────────────
+  { key: 'treadmill',         az: 'Qaçış lenti',              en: 'Treadmill',                        emoji: '🏃', cat: 'Kardio' },
+  { key: 'elliptical',        az: 'Elliptik trenajor',         en: 'Elliptical trainer',               emoji: '🔄', cat: 'Kardio' },
+  { key: 'stationary_bike',   az: 'Sabit velosiped',           en: 'Stationary / upright bike',        emoji: '🚴', cat: 'Kardio' },
+  { key: 'recumbent_bike',    az: 'Yaslanma velosipedi',       en: 'Recumbent bike',                   emoji: '🛋️', cat: 'Kardio' },
+  { key: 'spin_bike',         az: 'Spin velosipedi',           en: 'Spin / indoor cycling bike',       emoji: '⚡', cat: 'Kardio' },
+  { key: 'rowing_machine',    az: 'Avarçəkmə aparatı',         en: 'Rowing machine / ergometer',       emoji: '🚣', cat: 'Kardio' },
+  { key: 'skierg',            az: 'Xizəkçi trenajoru',         en: 'SkiErg',                           emoji: '⛷️', cat: 'Kardio' },
+  { key: 'air_bike',          az: 'Hava velosipedi',           en: 'Air bike / Assault bike / Fan bike',emoji: '💨', cat: 'Kardio' },
+  { key: 'stair_climber',     az: 'Pilləkən trenajoru',        en: 'Stair climber / StairMaster',      emoji: '🪜', cat: 'Kardio' },
+  { key: 'jump_rope',         az: 'Atlama ipi',                en: 'Jump rope / Skipping rope',        emoji: '🪢', cat: 'Kardio' },
+  { key: 'speed_rope',        az: 'Sürət ipi',                 en: 'Speed rope (double-unders)',       emoji: '🌀', cat: 'Kardio' },
+
+  // ── Azad Çəkilər ──────────────────────────────────────────────
+  { key: 'dumbbells',         az: 'Əl çəkiləri',               en: 'Dumbbells',                        emoji: '🏋️', cat: 'Azad çəkilər' },
+  { key: 'adjustable_dumbbells', az: 'Tənzimlənən əl çəkiləri', en: 'Adjustable dumbbells',            emoji: '🔧', cat: 'Azad çəkilər' },
+  { key: 'kettlebell',        az: 'Kettlebell (topçəki)',       en: 'Kettlebell',                       emoji: '⚫', cat: 'Azad çəkilər' },
+  { key: 'barbell',           az: 'Olimpik ştanqa',             en: 'Olympic barbell',                  emoji: '🏗️', cat: 'Azad çəkilər' },
+  { key: 'ez_bar',            az: 'EZ çubuğu',                  en: 'EZ curl bar',                      emoji: '〰️', cat: 'Azad çəkilər' },
+  { key: 'trap_bar',          az: 'Altıbucaqlı ştanqa',         en: 'Trap bar / Hex bar',               emoji: '⬡', cat: 'Azad çəkilər' },
+  { key: 'safety_squat_bar',  az: 'Təhlükəsiz çömbəlmə çubuğu',en: 'Safety squat bar',                emoji: '🦺', cat: 'Azad çəkilər' },
+  { key: 'weight_plates',     az: 'Disk çəkilər',               en: 'Weight plates / Bumper plates',   emoji: '🔵', cat: 'Azad çəkilər' },
+  { key: 'steel_mace',        az: 'Polad gürz',                 en: 'Steel mace / Gada',               emoji: '🔨', cat: 'Azad çəkilər' },
+  { key: 'steel_club',        az: 'Polad topuz',                en: 'Steel club',                      emoji: '🪃', cat: 'Azad çəkilər' },
+  { key: 'bulgarian_bag',     az: 'Bolqar çantası',             en: 'Bulgarian bag',                   emoji: '🌙', cat: 'Azad çəkilər' },
+  { key: 'sandbag',           az: 'Qum çantası',                en: 'Sandbag',                         emoji: '🛍️', cat: 'Azad çəkilər' },
+
+  // ── Aparatlar ─────────────────────────────────────────────────
+  { key: 'power_rack',        az: 'Güc çərçivəsi (squat kafes)',en: 'Power rack / Squat cage',         emoji: '🏟️', cat: 'Aparatlar' },
+  { key: 'smith_machine',     az: 'Smit aparatı',               en: 'Smith machine',                   emoji: '🔩', cat: 'Aparatlar' },
+  { key: 'cable_machine',     az: 'Kabel aparatı',              en: 'Cable machine / Functional trainer',emoji: '🔗', cat: 'Aparatlar' },
+  { key: 'lat_pulldown',      az: 'Lat pulldown aparatı',       en: 'Lat pulldown machine',            emoji: '⬇️', cat: 'Aparatlar' },
+  { key: 'seated_row',        az: 'Oturaq çəkmə aparatı',       en: 'Seated row machine',              emoji: '↩️', cat: 'Aparatlar' },
+  { key: 'leg_press',         az: 'Ayaq presi aparatı',         en: 'Leg press machine',               emoji: '🦵', cat: 'Aparatlar' },
+  { key: 'leg_extension',     az: 'Ayaq uzatma aparatı',        en: 'Leg extension machine',           emoji: '↗️', cat: 'Aparatlar' },
+  { key: 'leg_curl',          az: 'Ayaq bükmə aparatı',         en: 'Leg curl machine',                emoji: '↙️', cat: 'Aparatlar' },
+  { key: 'pec_deck',          az: 'Döş uçuş aparatı',           en: 'Pec deck / Chest fly machine',    emoji: '🦋', cat: 'Aparatlar' },
+  { key: 'home_gym_station',  az: 'Çox stansiyalı ev trenajoru',en: 'Multi-station home gym',          emoji: '🏠', cat: 'Aparatlar' },
+
+  // ── Bədən çəkisi / Kalistenik ─────────────────────────────────
+  { key: 'pullup_bar',        az: 'Çəkilmə çubuğu',             en: 'Pull-up bar / Chin-up bar',       emoji: '🔝', cat: 'Kalistenik' },
+  { key: 'dip_bars',          az: 'Dip çubuqları',              en: 'Dip bars / Parallel bars',        emoji: '📊', cat: 'Kalistenik' },
+  { key: 'parallettes',       az: 'Paralel çubuqlar',           en: 'Parallettes',                     emoji: '⎰⎱', cat: 'Kalistenik' },
+  { key: 'gymnastic_rings',   az: 'Gimnastika halqaları',        en: 'Gymnastic rings',                 emoji: '⭕', cat: 'Kalistenik' },
+  { key: 'trx',               az: 'Asma lentlər (TRX)',         en: 'TRX / Suspension trainer',        emoji: '🧗', cat: 'Kalistenik' },
+  { key: 'pullup_tower',      az: 'Sərbəst çəkilmə qülləsi',    en: 'Freestanding pull-up tower',      emoji: '🗼', cat: 'Kalistenik' },
+  { key: 'push_up_handles',   az: 'Buraxma tutacaqları',         en: 'Push-up handles / Push-up bars',  emoji: '✊', cat: 'Kalistenik' },
+  { key: 'ab_wheel',          az: 'Qarın çarxı',                 en: 'Ab wheel / Ab roller',            emoji: '⚙️', cat: 'Kalistenik' },
+
+  // ── Funksional İdman ──────────────────────────────────────────
+  { key: 'battle_ropes',      az: 'Döyüş ipləri',               en: 'Battle ropes',                    emoji: '🌊', cat: 'Funksional' },
+  { key: 'landmine',          az: 'Yer mıxı (landmine)',         en: 'Landmine attachment',             emoji: '📌', cat: 'Funksional' },
+  { key: 'plyo_box',          az: 'Atlama qutusu',               en: 'Plyo box / Jump box',             emoji: '📦', cat: 'Funksional' },
+  { key: 'medicine_ball',     az: 'Tibbi top',                   en: 'Medicine ball',                   emoji: '⚽', cat: 'Funksional' },
+  { key: 'wall_ball',         az: 'Divar topu',                  en: 'Wall ball',                       emoji: '🏀', cat: 'Funksional' },
+  { key: 'slam_ball',         az: 'Slam top',                    en: 'Slam ball',                       emoji: '💥', cat: 'Funksional' },
+  { key: 'sled',              az: 'İtələmə/çəkmə sürüşkəni',    en: 'Push/pull sled (prowler)',         emoji: '🛷', cat: 'Funksional' },
+  { key: 'agility_ladder',    az: 'Çeviklik nərdivanı',          en: 'Agility ladder',                  emoji: '🪜', cat: 'Funksional' },
+  { key: 'hurdles',           az: 'Maneə çubuqları',             en: 'Agility hurdles',                 emoji: '🏁', cat: 'Funksional' },
+  { key: 'step_platform',     az: 'Addım platforması',           en: 'Step platform / Aerobic step',    emoji: '🟫', cat: 'Funksional' },
+
+  // ── Çeviklik / Bərpa ─────────────────────────────────────────
+  { key: 'yoga_mat',          az: 'Yoga / idman döşəyi',         en: 'Yoga mat / Exercise mat',         emoji: '🧘', cat: 'Çeviklik' },
+  { key: 'foam_roller',       az: 'Köpük rulon',                 en: 'Foam roller',                     emoji: '🟤', cat: 'Çeviklik' },
+  { key: 'massage_gun',       az: 'Masaj silahı',                en: 'Massage gun / Percussion device', emoji: '🔫', cat: 'Çeviklik' },
+  { key: 'massage_ball',      az: 'Masaj topu',                  en: 'Lacrosse ball / Massage ball',    emoji: '🎱', cat: 'Çeviklik' },
+  { key: 'stretching_strap',  az: 'Gərginlik lenti',             en: 'Stretching strap / Yoga strap',   emoji: '🎀', cat: 'Çeviklik' },
+  { key: 'stability_ball',    az: 'Stabillik topu',              en: 'Stability ball / Swiss ball',     emoji: '🔵', cat: 'Çeviklik' },
+  { key: 'bosu_ball',         az: 'Bosu topu',                   en: 'Bosu ball',                       emoji: '🌕', cat: 'Çeviklik' },
+  { key: 'balance_board',     az: 'Balans taxtası',              en: 'Balance board / Wobble board',    emoji: '🏄', cat: 'Çeviklik' },
+  { key: 'inversion_table',   az: 'İnversiya masası',            en: 'Inversion table',                 emoji: '🔃', cat: 'Çeviklik' },
+
+  // ── Aksessuarlar ──────────────────────────────────────────────
+  { key: 'resistance_bands',  az: 'Rezin lentlər',               en: 'Resistance bands / Loop bands',   emoji: '〰️', cat: 'Aksessuarlar' },
+  { key: 'resistance_tubes',  az: 'Rezin borular',               en: 'Resistance tubes with handles',   emoji: '🔵', cat: 'Aksessuarlar' },
+  { key: 'ankle_weights',     az: 'Ayaq biləyi çəkiləri',        en: 'Ankle weights',                   emoji: '🦶', cat: 'Aksessuarlar' },
+  { key: 'wrist_weights',     az: 'Biləklik çəkilər',            en: 'Wrist weights',                   emoji: '⌚', cat: 'Aksessuarlar' },
+  { key: 'weight_vest',       az: 'Çəkili jilet',                en: 'Weight vest / Weighted vest',     emoji: '🦺', cat: 'Aksessuarlar' },
+  { key: 'dip_belt',          az: 'Çəki kəməri',                 en: 'Dip belt / Weight belt',          emoji: '🥋', cat: 'Aksessuarlar' },
+  { key: 'lifting_belt',      az: 'Qaldırma kəməri',             en: 'Weightlifting belt',              emoji: '🛡️', cat: 'Aksessuarlar' },
+  { key: 'knee_sleeves',      az: 'Diz qoruyucu',                en: 'Knee sleeves / Knee wraps',       emoji: '🦵', cat: 'Aksessuarlar' },
+  { key: 'wrist_wraps',       az: 'Biləklik sarğı',              en: 'Wrist wraps',                     emoji: '🩹', cat: 'Aksessuarlar' },
+  { key: 'lifting_straps',    az: 'Qaldırma lentləri',           en: 'Lifting straps / Wrist straps',   emoji: '✊', cat: 'Aksessuarlar' },
+  { key: 'workout_gloves',    az: 'İdman əlcəkləri',             en: 'Workout gloves / Gym gloves',     emoji: '🧤', cat: 'Aksessuarlar' },
+  { key: 'chalk',             az: 'Maqnezium tozu',              en: 'Lifting chalk / Magnesium carbonate', emoji: '🤍', cat: 'Aksessuarlar' },
+  { key: 'bench',             az: 'İdman skamyası',              en: 'Weight bench (flat/adjustable)',  emoji: '🛋️', cat: 'Aksessuarlar' },
+  { key: 'bodyweight',        az: 'Bədən çəkisi',                en: 'Bodyweight only',                 emoji: '🏃', cat: 'Kalistenik' },
+];
+
+// ─────────────────────────────────────────────
+// GYM 2x/WEEK  (4 weeks · Upper / Lower split)
+// Schedule: Monday = Upper Body, Friday = Lower Body
+// Phase 1 W1-2: Foundation 3×15 · Phase 2 W3-4: Build 3×12
+// ─────────────────────────────────────────────
+const twoDayUpper = (week, sets, reps, progression) => ({
+  id: `w${week}-day-1`,
+  dayNumber: 1,
+  dayName: 'Monday',
+  title: 'Upper Body',
+  warmup: {
+    duration: '5 min',
+    exercises: [
+      { name: 'Treadmill Walk', duration: '2 min' },
+      { name: 'Arm Circles', sets: 2, reps: 10 },
+      { name: 'Band Pull-Aparts', sets: 2, reps: 12 },
+    ],
+  },
+  mainWorkout: [
+    { name: 'Machine Chest Press', sets, reps, rest: '90 sec', tip: 'Keep shoulders retracted and down throughout the movement', ...(progression ? { progression } : {}) },
+    { name: 'Lat Pulldown', sets, reps, rest: '90 sec', tip: 'Pull bar to upper chest, lean slightly back', ...(progression ? { progression } : {}) },
+    { name: 'Machine Shoulder Press', sets, reps, rest: '90 sec', tip: 'Press straight up, control the descent', ...(progression ? { progression } : {}) },
+    { name: 'Seated Cable Row', sets, reps, rest: '90 sec', tip: 'Pull elbows back, squeeze shoulder blades together', ...(progression ? { progression } : {}) },
+    { name: 'Cable Tricep Pushdown', sets, reps, rest: '60 sec', tip: 'Keep elbows pinned to sides, extend fully', ...(progression ? { progression } : {}) },
+    { name: 'DB Bicep Curl', sets, reps, rest: '60 sec', tip: 'Keep elbows still, curl all the way up', ...(progression ? { progression } : {}) },
+  ],
+  cooldown: {
+    duration: '5 min',
+    exercises: [
+      { name: 'Chest Stretch', duration: '30 sec each side' },
+      { name: 'Lat Stretch', duration: '30 sec each side' },
+      { name: 'Shoulder Cross-Body Stretch', duration: '30 sec each side' },
+    ],
+  },
+});
+
+const twoDayLower = (week, sets, reps, progression) => ({
+  id: `w${week}-day-2`,
+  dayNumber: 2,
+  dayName: 'Friday',
+  title: 'Lower Body',
+  warmup: {
+    duration: '5 min',
+    exercises: [
+      { name: 'Stationary Bike', duration: '3 min' },
+      { name: 'Hip Circles', sets: 2, reps: 10 },
+      { name: 'Bodyweight Squat', sets: 2, reps: 10 },
+    ],
+  },
+  mainWorkout: [
+    { name: 'Leg Press', sets, reps, rest: '90 sec', tip: 'Feet shoulder-width, push through heels, don\'t lock knees', ...(progression ? { progression } : {}) },
+    { name: 'Leg Curl Machine', sets, reps, rest: '90 sec', tip: 'Curl smoothly, squeeze hamstrings at the top', ...(progression ? { progression } : {}) },
+    { name: 'Leg Extension', sets, reps, rest: '90 sec', tip: 'Extend fully, hold 1 second at top', ...(progression ? { progression } : {}) },
+    { name: 'Hip Abduction Machine', sets, reps, rest: '60 sec', tip: 'Control the movement, don\'t use momentum', ...(progression ? { progression } : {}) },
+    { name: 'Calf Raise Machine', sets, reps: reps + 3, rest: '60 sec', tip: 'Full range of motion — all the way up and down', ...(progression ? { progression } : {}) },
+    { name: 'Plank Hold', sets, reps: '30 seconds', rest: '45 sec', tip: 'Hips level, core braced, breathe steadily' },
+  ],
+  cooldown: {
+    duration: '5 min',
+    exercises: [
+      { name: 'Quad Stretch', duration: '30 sec each leg' },
+      { name: 'Hamstring Stretch', duration: '30 sec each leg' },
+      { name: 'Hip Flexor Stretch', duration: '30 sec each side' },
+    ],
+  },
+});
+
+export const TWO_DAY_WORKOUTS = {
+  id: 'starter-2day',
+  name: '2-Day Gym Starter',
+  weeks: [
+    { week: 1, days: [twoDayUpper(1, 3, 15, null), twoDayLower(1, 3, 15, null)] },
+    { week: 2, days: [twoDayUpper(2, 3, 15, 'Add 2.5 kg vs W1'), twoDayLower(2, 3, 15, 'Add 5 kg on Leg Press vs W1')] },
+    { week: 3, days: [twoDayUpper(3, 3, 12, null), twoDayLower(3, 3, 12, null)] },
+    { week: 4, days: [twoDayUpper(4, 3, 12, 'Add 2.5 kg vs W3'), twoDayLower(4, 3, 12, 'Add 5 kg on Leg Press vs W3')] },
   ],
 };

@@ -1,14 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  Dumbbell, LogOut, User, Flame, CheckCircle2, Calendar, Trophy, 
+import {
+  Dumbbell, LogOut, User, Flame, CheckCircle2, Calendar, Trophy,
   ArrowRight, Clock, Zap, ChevronRight, Utensils, BarChart3,
   FileText, Circle, Minus, X
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
+import ProgramSelectorModal from '../components/ProgramSelectorModal';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, PROGRAMS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, HOME_BEGINNER_WORKOUTS } from '../data/programs';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const DashboardPage = () => {
   const [purchases, setPurchases] = useState([]);
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
+  const [customPlanData, setCustomPlanData] = useState(null);
+  const [showProgramSelector, setShowProgramSelector] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -39,7 +42,8 @@ const DashboardPage = () => {
       const { data: purchasesData } = await supabase
         .from('purchases')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .order('purchased_at', { ascending: false });
       setPurchases(purchasesData || []);
 
       const progressData = {};
@@ -52,10 +56,46 @@ const DashboardPage = () => {
         progressData[purchase.program_id] = prog || [];
       }
       setProgress(progressData);
+
+      // Load custom plan data for the first (active) program
+      const activePurchase = (purchasesData || [])[0];
+      if (activePurchase?.program_id?.startsWith('custom-')) {
+        const cached = sessionStorage.getItem('customPlans');
+        if (cached) {
+          const plans = JSON.parse(cached);
+          if (plans[activePurchase.program_id]) {
+            setCustomPlanData(plans[activePurchase.program_id]);
+          } else {
+            await loadCustomPlan(activePurchase.program_id, plans);
+          }
+        } else {
+          await loadCustomPlan(activePurchase.program_id, {});
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCustomPlan = async (programId, existingPlans) => {
+    const planId = programId.replace('custom-', '');
+    const { data } = await supabase
+      .from('custom_plans')
+      .select('*')
+      .eq('id', planId)
+      .single();
+    if (data?.plan_data) {
+      const plan = typeof data.plan_data === 'string'
+        ? JSON.parse(data.plan_data)
+        : data.plan_data;
+      const fullPlan = { ...plan, id: programId };
+      setCustomPlanData(fullPlan);
+      sessionStorage.setItem('customPlans', JSON.stringify({
+        ...existingPlans,
+        [programId]: fullPlan,
+      }));
     }
   };
 
@@ -65,49 +105,125 @@ const DashboardPage = () => {
     navigate('/');
   };
 
-  // Get active program (Free Starter for now)
-  const activeProgram = purchases.find(p => p.program_id === 'free-starter');
-  const programProgress = useMemo(() => progress['free-starter'] || [], [progress]);
-  const workoutData = FREE_STARTER_WORKOUTS;
+  const handleProgramSelect = (programType) => {
+    if (programType === 'home') {
+      navigate('/home-setup');
+    } else if (programType === 'gym') {
+      navigate('/browse?program=free-starter');
+    } else if (programType === 'custom') {
+      navigate('/create-plan');
+    }
+    setShowProgramSelector(false);
+  };
 
-  // Calculate stats
+  // Active program = most recently purchased
+  const activeProgram = purchases[0] || null;
+
+  // Resolve workout data dynamically
+  const workoutData = useMemo(() => {
+    if (!activeProgram) return null;
+    const pid = activeProgram.program_id;
+    if (pid === 'free-starter') return FREE_STARTER_WORKOUTS;
+    if (pid === 'home-beginner') return HOME_BEGINNER_WORKOUTS;
+    if (pid.startsWith('custom-')) return customPlanData;
+    return null;
+  }, [activeProgram, customPlanData]);
+
+  const programProgress = useMemo(
+    () => (activeProgram ? progress[activeProgram.program_id] || [] : []),
+    [activeProgram, progress]
+  );
+
+  // Workout day indices (days of week 0=Sun…6=Sat)
+  const workoutDayIndices = useMemo(
+    () => workoutData?.workoutDayIndices || [1, 3, 5],
+    [workoutData]
+  );
+
+  // Stats
   const stats = useMemo(() => {
     const completedWorkouts = programProgress.filter(p => p.completed).length;
-    const totalWorkouts = workoutData?.weeks[0]?.days.length || 3;
-    const progressPercent = Math.round((completedWorkouts / totalWorkouts) * 100);
-    
-    // Calculate streak (consecutive days)
-    let streak = 0;
-    const sortedProgress = [...programProgress]
-      .filter(p => p.completed)
-      .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
-    
-    if (sortedProgress.length > 0) {
-      streak = sortedProgress.length; // Simplified streak
-    }
+    const allDays = workoutData?.weeks?.flatMap(w => w.days) || [];
+    const totalWorkouts = allDays.length || workoutDayIndices.length;
+    const progressPercent = totalWorkouts > 0
+      ? Math.round((completedWorkouts / totalWorkouts) * 100)
+      : 0;
+
+    const daysPerWeek = workoutDayIndices.length;
+    const totalWeeks = workoutData?.weeks?.length || 1;
+    const currentWeek = Math.min(
+      Math.floor(completedWorkouts / daysPerWeek) + 1,
+      totalWeeks
+    );
+
+    const streak = programProgress.filter(p => p.completed).length;
 
     return {
       streak,
       completedWorkouts,
       totalWorkouts,
       progressPercent,
-      currentWeek: 1,
-      totalWeeks: 1
+      currentWeek,
+      totalWeeks,
+      daysPerWeek,
     };
-  }, [programProgress, workoutData]);
+  }, [programProgress, workoutData, workoutDayIndices]);
 
-  // Get today's info
+  // Last 7 days activity (for Card 1 mini chart)
+  const last7Days = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dateStr = d.toISOString().split('T')[0];
+      const done = programProgress.some(
+        p => p.completed && p.completed_at?.startsWith(dateStr)
+      );
+      return { done };
+    });
+  }, [programProgress]);
+
+  // Per-program-week bar data (for Card 4 mini chart)
+  const weeklyBarData = useMemo(() => {
+    const completed = programProgress
+      .filter(p => p.completed && p.completed_at)
+      .sort((a, b) => new Date(a.completed_at) - new Date(b.completed_at));
+    const daysPerWeek = workoutDayIndices.length || 3;
+    const totalWeeks = workoutData?.weeks?.length || 1;
+    return Array.from({ length: totalWeeks }, (_, weekIdx) => {
+      const count = completed.slice(weekIdx * daysPerWeek, (weekIdx + 1) * daysPerWeek).length;
+      return { count };
+    });
+  }, [programProgress, workoutDayIndices, workoutData]);
+
+  // SVG area path for Card 2
+  const svgAreaPath = useMemo(() => {
+    if (weeklyBarData.length < 2) return { line: 'M0,25 L100,25', fill: 'M0,25 L100,25 L100,30 L0,30 Z' };
+    const maxCount = Math.max(...weeklyBarData.map(w => w.count), 1);
+    const pts = weeklyBarData.map((w, i) => {
+      const x = (i / (weeklyBarData.length - 1)) * 100;
+      const y = 30 - (w.count / maxCount) * 25;
+      return [x, y];
+    });
+    const line = `M${pts.map(([x, y]) => `${x},${y}`).join(' L')}`;
+    const fill = `M${pts[0][0]},${pts[0][1]} L${pts.map(([x, y]) => `${x},${y}`).join(' L')} L100,30 L0,30 Z`;
+    return { line, fill, pts };
+  }, [weeklyBarData]);
+
+  // Map day-of-week to the correct workout
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
-  const workoutDays = [1, 3, 5]; // Mon, Wed, Fri
-  const isWorkoutDay = workoutDays.includes(dayOfWeek);
-  
-  // Map day of week to workout
+  const dayOfWeek = today.getDay();
+  const isWorkoutDay = workoutDayIndices.includes(dayOfWeek);
+
   const getDayWorkout = (dow) => {
-    if (dow === 1) return workoutData?.weeks[0]?.days[0]; // Monday - Day 1
-    if (dow === 3) return workoutData?.weeks[0]?.days[1]; // Wednesday - Day 2
-    if (dow === 5) return workoutData?.weeks[0]?.days[2]; // Friday - Day 3
-    return null;
+    const idx = workoutDayIndices.indexOf(dow);
+    if (idx === -1 || !workoutData?.weeks) return null;
+    const completedCount = programProgress.filter(p => p.completed).length;
+    const daysPerWeek = workoutDayIndices.length;
+    const weekIndex = Math.min(
+      Math.floor(completedCount / daysPerWeek),
+      workoutData.weeks.length - 1
+    );
+    return workoutData.weeks[weekIndex]?.days[idx] || null;
   };
 
   const todayWorkout = getDayWorkout(dayOfWeek);
@@ -115,12 +231,12 @@ const DashboardPage = () => {
     p => p.day_id === todayWorkout.id && p.completed
   );
 
-  // Generate week days
+  // Weekly calendar
   const getWeekDays = () => {
     const days = [];
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // Start from Sunday
-    
+    startOfWeek.setDate(today.getDate() - today.getDay());
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(startOfWeek);
       date.setDate(startOfWeek.getDate() + i);
@@ -132,17 +248,17 @@ const DashboardPage = () => {
       const isToday = date.toDateString() === today.toDateString();
       const isPast = date < today && !isToday;
       const isMissed = isPast && workout && !isCompleted;
-      
+
       days.push({
         date,
         dayLetter: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][dow],
         dayNumber: date.getDate(),
-        isWorkoutDay: workoutDays.includes(dow),
+        isWorkoutDay: workoutDayIndices.includes(dow),
         isCompleted,
         isToday,
         isPast,
         isMissed,
-        workout
+        workout,
       });
     }
     return days;
@@ -150,17 +266,15 @@ const DashboardPage = () => {
 
   const weekDays = getWeekDays();
 
-  // Get upcoming workouts
+  // Upcoming workouts
   const getUpcomingWorkouts = () => {
     const upcoming = [];
-    const daysToCheck = 7;
-    
-    for (let i = 0; i < daysToCheck && upcoming.length < 3; i++) {
+    for (let i = 0; i < 7 && upcoming.length < 3; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dow = date.getDay();
       const workout = getDayWorkout(dow);
-      
+
       if (workout || i === 0) {
         const isCompleted = workout && programProgress.some(
           p => p.day_id === workout.id && p.completed
@@ -171,7 +285,7 @@ const DashboardPage = () => {
           isToday: i === 0,
           workout,
           isCompleted,
-          isRestDay: !workout
+          isRestDay: !workout,
         });
       }
     }
@@ -180,12 +294,14 @@ const DashboardPage = () => {
 
   const upcomingWorkouts = getUpcomingWorkouts();
 
-  // Greeting based on streak
   const getGreeting = () => {
-    if (stats.streak === 0) return "Ready to start your journey? Let's go! 💪";
-    if (stats.streak <= 2) return "Great start! Keep the momentum going! 🔥";
-    return `You're on a ${stats.streak}-day streak! Unstoppable! 🏆`;
+    if (stats.streak === 0) return "Ready to start your journey? Let's go!";
+    if (stats.streak <= 2) return "Great start! Keep the momentum going!";
+    return `You're on a ${stats.streak}-workout streak! Unstoppable!`;
   };
+
+  const programLink = activeProgram ? `/program/${activeProgram.program_id}` : '/my-programs';
+  const programName = activeProgram?.program_name || 'My Program';
 
   if (!user) return null;
 
@@ -197,22 +313,12 @@ const DashboardPage = () => {
     );
   }
 
-  // If no active program, redirect to browse
+  // No active program → show program selector
   if (!activeProgram) {
     return (
       <div className="min-h-screen bg-[#0f0f0f]" data-testid="dashboard-page">
         <DashboardNav user={user} onLogout={handleLogout} activePage="dashboard" />
-        <main className="pt-24 pb-16 px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="font-heading text-3xl font-bold text-white mb-4">
-              Welcome, {user.name?.split(' ')[0]}! 👋
-            </h1>
-            <p className="text-zinc-400 mb-8">Get started by choosing a program</p>
-            <Button onClick={() => navigate('/browse')} className="bg-green-600 hover:bg-green-700">
-              Browse Programs
-            </Button>
-          </div>
-        </main>
+        <ProgramSelectorModal onSelect={handleProgramSelect} />
       </div>
     );
   }
@@ -223,11 +329,11 @@ const DashboardPage = () => {
 
       <main className="pt-24 pb-16 px-4 md:px-6">
         <div className="max-w-6xl mx-auto space-y-8">
-          
-          {/* Header Section */}
+
+          {/* Header */}
           <section className="mb-8">
             <h1 className="font-heading text-2xl md:text-3xl font-bold text-white mb-2" data-testid="welcome-message">
-              Welcome back, {user.name?.split(' ')[0]}! 👋
+              Welcome back, {user.name?.split(' ')[0]}!
             </h1>
             <p className="text-zinc-400" data-testid="motivation-message">
               {getGreeting()}
@@ -235,38 +341,112 @@ const DashboardPage = () => {
           </section>
 
           {/* Stats Row */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="stats-row">
-            <StatCard 
-              icon={<Flame className="w-6 h-6 text-orange-500" />}
+          <section className="grid grid-cols-2 gap-3" data-testid="stats-row">
+            {/* Card 1 — Workouts Done */}
+            <StatCard
+              icon={<Flame className="w-4 h-4 text-orange-500" />}
+              gradient="from-orange-500/10 to-transparent"
               value={stats.streak}
-              label="Day Streak"
-              testId="stat-streak"
-            />
-            <StatCard 
-              icon={<CheckCircle2 className="w-6 h-6 text-green-500" />}
-              value={stats.completedWorkouts}
               label="Workouts Done"
-              testId="stat-workouts"
+              testId="stat-streak"
+              chart={
+                <div className="flex items-end gap-0.5 h-10">
+                  {last7Days.map((day, i) => (
+                    <div
+                      key={i}
+                      className={`flex-1 rounded-sm ${day.done ? 'bg-orange-500' : 'bg-zinc-700'}`}
+                      style={{ height: day.done ? '100%' : '35%' }}
+                    />
+                  ))}
+                </div>
+              }
             />
-            <StatCard 
-              icon={<Calendar className="w-6 h-6 text-blue-500" />}
+
+            {/* Card 2 — Completed */}
+            <StatCard
+              icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}
+              gradient="from-green-500/10 to-transparent"
+              value={stats.completedWorkouts}
+              sublabel={`/ ${stats.totalWorkouts}`}
+              label="Completed"
+              testId="stat-workouts"
+              chart={
+                <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-10">
+                  <defs>
+                    <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity="0.35" />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d={svgAreaPath.fill} fill="url(#greenGrad)" />
+                  <path d={svgAreaPath.line} fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {svgAreaPath.pts?.map(([x, y], i) => {
+                    if (i === stats.currentWeek - 1) {
+                      return <circle key={i} cx={x} cy={y} r="2.5" fill="#22c55e" />;
+                    }
+                    return null;
+                  })}
+                </svg>
+              }
+            />
+
+            {/* Card 3 — Current Week */}
+            <StatCard
+              icon={<Calendar className="w-4 h-4 text-blue-500" />}
+              gradient="from-blue-500/10 to-transparent"
               value={`Week ${stats.currentWeek}`}
               sublabel={`of ${stats.totalWeeks}`}
               label="Current Week"
               testId="stat-week"
+              chart={
+                <div className="flex gap-1">
+                  {weekDays.map((day, i) => (
+                    <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
+                      <div className={`w-full aspect-square rounded-full flex items-center justify-center text-[9px] font-bold
+                        ${day.isCompleted
+                          ? 'bg-blue-500 text-white'
+                          : day.isToday && day.isWorkoutDay
+                            ? 'bg-blue-500/30 text-blue-300 ring-1 ring-blue-500'
+                            : day.isWorkoutDay
+                              ? 'bg-zinc-700 text-zinc-400'
+                              : 'bg-zinc-800 text-zinc-600'}`}>
+                        {day.dayLetter}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              }
             />
-            <StatCard 
-              icon={<Trophy className="w-6 h-6 text-yellow-500" />}
+
+            {/* Card 4 — Program Progress */}
+            <StatCard
+              icon={<Trophy className="w-4 h-4 text-yellow-500" />}
+              gradient="from-yellow-500/10 to-transparent"
               value={`${stats.progressPercent}%`}
               label="Program Complete"
-              showRing
-              ringPercent={stats.progressPercent}
               testId="stat-progress"
+              chart={
+                <div className="flex items-end gap-0.5 h-10">
+                  {weeklyBarData.map((week, i) => (
+                    <div
+                      key={i}
+                      className={`flex-1 rounded-sm ${
+                        i < stats.currentWeek - 1
+                          ? 'bg-yellow-500'
+                          : i === stats.currentWeek - 1
+                            ? 'bg-yellow-500/60'
+                            : 'bg-zinc-700'
+                      }`}
+                      style={{ height: `${Math.max(15, (week.count / (stats.daysPerWeek || 1)) * 100)}%` }}
+                    />
+                  ))}
+                </div>
+              }
             />
           </section>
 
-          {/* Today's Workout Card */}
-          <section 
+          {/* Today's Workout */}
+          <section
             className="bg-zinc-900/80 border-l-4 border-green-500 rounded-2xl p-6 md:p-8"
             data-testid="todays-workout-card"
           >
@@ -289,7 +469,7 @@ const DashboardPage = () => {
                 <div className="flex flex-wrap gap-4 mb-6 text-sm">
                   <span className="flex items-center gap-2 text-zinc-400">
                     <Dumbbell className="w-4 h-4 text-green-500" />
-                    {todayWorkout.mainWorkout.length} exercises
+                    {todayWorkout.mainWorkout?.length} exercises
                   </span>
                   <span className="flex items-center gap-2 text-zinc-400">
                     <Clock className="w-4 h-4 text-green-500" />
@@ -303,12 +483,12 @@ const DashboardPage = () => {
                 <div className="mb-6">
                   <p className="text-zinc-500 text-sm mb-2">Preview:</p>
                   <div className="flex flex-wrap gap-2">
-                    {todayWorkout.mainWorkout.slice(0, 3).map((ex, i) => (
+                    {todayWorkout.mainWorkout?.slice(0, 3).map((ex, i) => (
                       <span key={i} className="px-3 py-1 bg-zinc-800 rounded-full text-sm text-zinc-300">
                         {ex.name}
                       </span>
                     ))}
-                    {todayWorkout.mainWorkout.length > 3 && (
+                    {(todayWorkout.mainWorkout?.length || 0) > 3 && (
                       <span className="px-3 py-1 bg-zinc-800 rounded-full text-sm text-zinc-500">
                         +{todayWorkout.mainWorkout.length - 3} more
                       </span>
@@ -317,7 +497,7 @@ const DashboardPage = () => {
                 </div>
                 {!isTodayCompleted && (
                   <Button
-                    onClick={() => navigate(`/program/free-starter/day/${todayWorkout.id}`)}
+                    onClick={() => navigate(`/program/${activeProgram.program_id}/day/${todayWorkout.id}`)}
                     data-testid="start-today-workout"
                     className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-8 rounded-full text-lg group"
                   >
@@ -329,7 +509,7 @@ const DashboardPage = () => {
             ) : (
               <>
                 <h2 className="font-heading text-xl font-bold text-white uppercase mb-2">
-                  Rest Day 😴
+                  Rest Day
                 </h2>
                 <p className="text-zinc-400">
                   Recovery is important! Take it easy today and come back stronger.
@@ -347,10 +527,10 @@ const DashboardPage = () => {
               {weekDays.map((day, i) => (
                 <div
                   key={i}
-                  onClick={() => day.isCompleted && day.workout && navigate(`/program/free-starter/day/${day.workout.id}`)}
+                  onClick={() => day.isCompleted && day.workout && navigate(`/program/${activeProgram.program_id}/day/${day.workout.id}`)}
                   className={`flex-1 flex flex-col items-center p-3 rounded-xl transition-all ${
-                    day.isToday 
-                      ? 'bg-green-500/20 border-2 border-green-500' 
+                    day.isToday
+                      ? 'bg-green-500/20 border-2 border-green-500'
                       : 'bg-zinc-900/50 border border-zinc-800'
                   } ${day.isCompleted ? 'cursor-pointer hover:border-green-500/50' : ''}`}
                   data-testid={`calendar-day-${i}`}
@@ -379,17 +559,17 @@ const DashboardPage = () => {
             </div>
           </section>
 
-          {/* Program Progress Bar */}
+          {/* Program Progress */}
           <section className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6" data-testid="program-progress">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-heading text-lg font-bold text-white">
-                Free Starter Program
+                {programName}
               </h2>
-              <Link 
-                to="/program/free-starter" 
+              <Link
+                to={programLink}
                 className="text-green-500 hover:text-green-400 text-sm flex items-center gap-1"
               >
-                View Full Program <ChevronRight className="w-4 h-4" />
+                View Program <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             <Progress value={stats.progressPercent} className="h-3 bg-zinc-800 mb-3" />
@@ -415,7 +595,7 @@ const DashboardPage = () => {
                       {item.isToday ? 'Today' : item.dayName}
                     </span>
                     {item.isRestDay ? (
-                      <p className="text-zinc-400">Rest Day 😴 Recovery is important!</p>
+                      <p className="text-zinc-400">Rest Day — Recovery is important!</p>
                     ) : (
                       <p className="text-white font-medium">
                         Day {item.workout?.dayNumber} — {item.workout?.title}
@@ -424,11 +604,11 @@ const DashboardPage = () => {
                   </div>
                   {!item.isRestDay && (
                     <Button
-                      onClick={() => navigate(`/program/free-starter/day/${item.workout?.id}`)}
+                      onClick={() => navigate(`/program/${activeProgram.program_id}/day/${item.workout?.id}`)}
                       variant={item.isToday && !item.isCompleted ? 'default' : 'outline'}
                       size="sm"
-                      className={item.isToday && !item.isCompleted 
-                        ? 'bg-green-600 hover:bg-green-700' 
+                      className={item.isToday && !item.isCompleted
+                        ? 'bg-green-600 hover:bg-green-700'
                         : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
                       }
                     >
@@ -446,7 +626,7 @@ const DashboardPage = () => {
             <QuickActionCard
               icon={<FileText className="w-6 h-6" />}
               label="View Full Program"
-              onClick={() => navigate('/program/free-starter')}
+              onClick={() => navigate(programLink)}
               testId="action-program"
             />
             <QuickActionCard
@@ -468,7 +648,8 @@ const DashboardPage = () => {
   );
 };
 
-// Dashboard Navigation Component
+// ── Sub-components ──────────────────────────────────────────────
+
 const DashboardNav = ({ user, onLogout, activePage }) => {
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard', key: 'dashboard' },
@@ -484,15 +665,15 @@ const DashboardNav = ({ user, onLogout, activePage }) => {
           <Dumbbell className="w-8 h-8 text-green-500" />
           <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
         </Link>
-        
+
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map(link => (
             <Link
               key={link.key}
               to={link.path}
               className={`text-sm font-medium transition-colors ${
-                activePage === link.key 
-                  ? 'text-green-400' 
+                activePage === link.key
+                  ? 'text-green-400'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -500,7 +681,7 @@ const DashboardNav = ({ user, onLogout, activePage }) => {
             </Link>
           ))}
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-zinc-400">
             <User className="w-5 h-5" />
@@ -520,33 +701,21 @@ const DashboardNav = ({ user, onLogout, activePage }) => {
   );
 };
 
-// Stat Card Component
-const StatCard = ({ icon, value, sublabel, label, showRing, ringPercent, testId }) => (
-  <div 
-    className="bg-[#1a1a1a] border border-zinc-800 rounded-xl p-4 flex flex-col items-center text-center"
-    data-testid={testId}
-  >
-    <div className="mb-2">{icon}</div>
-    <div className={`relative flex items-center justify-center ${showRing ? 'w-16 h-16' : ''}`}>
-      {showRing && (
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
-          <circle cx="18" cy="18" r="15" fill="none" stroke="#27272a" strokeWidth="3" />
-          <circle
-            cx="18" cy="18" r="15" fill="none" stroke="#22c55e" strokeWidth="3"
-            strokeDasharray={`${ringPercent} 100`}
-            strokeLinecap="round"
-            transform="rotate(-90 18 18)"
-          />
-        </svg>
-      )}
-      <span className={`font-heading font-bold text-white relative z-10 ${showRing ? 'text-base' : 'text-2xl'}`}>{value}</span>
-      {sublabel && <span className="text-zinc-500 text-sm ml-1 relative z-10">{sublabel}</span>}
+const StatCard = ({ icon, gradient, value, sublabel, label, chart, testId }) => (
+  <div className="bg-zinc-900 rounded-2xl p-4 relative overflow-hidden" data-testid={testId}>
+    <div className={`absolute inset-0 bg-gradient-to-br ${gradient} pointer-events-none`} />
+    <div className="flex items-center gap-1.5 mb-2 relative z-10">
+      {icon}
+      <span className="text-zinc-400 text-xs font-medium">{label}</span>
     </div>
-    <span className="text-zinc-500 text-xs mt-1">{label}</span>
+    <div className="relative z-10 mb-3">
+      <span className="font-heading text-3xl font-bold text-white">{value}</span>
+      {sublabel && <span className="text-zinc-400 text-sm ml-1">{sublabel}</span>}
+    </div>
+    <div className="relative z-10">{chart}</div>
   </div>
 );
 
-// Quick Action Card Component
 const QuickActionCard = ({ icon, label, onClick, testId }) => (
   <button
     onClick={onClick}

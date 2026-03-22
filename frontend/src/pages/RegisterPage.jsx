@@ -49,7 +49,19 @@ const RegisterPage = () => {
           data: { name: formData.name }
         }
       });
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        const msg = signUpError.message || '';
+        if (msg.includes('body stream already read') || msg.includes('fetch')) {
+          setError('Connection error. Please reload the page and try again.');
+        } else {
+          setError(msg || 'Registration failed. Please try again.');
+        }
+        return;
+      }
+      if (!data.user) {
+        setError('This email is already registered. Please sign in instead.');
+        return;
+      }
       localStorage.setItem('user', JSON.stringify({
         id: data.user.id,
         name: formData.name,
@@ -57,12 +69,7 @@ const RegisterPage = () => {
       }));
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.message || '';
-      if (msg.includes('body stream already read') || msg.includes('fetch')) {
-        setError('Connection error. Please reload the page and try again.');
-      } else {
-        setError(msg || 'Registration failed. Please try again.');
-      }
+      setError(err?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

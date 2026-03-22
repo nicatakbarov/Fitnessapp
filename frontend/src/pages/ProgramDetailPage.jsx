@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Calendar, Clock, Dumbbell as DumbbellIcon, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, PROGRAMS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS, TWO_DAY_WORKOUTS, PROGRAMS } from '../data/programs';
 
 const ProgramDetailPage = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const ProgramDetailPage = () => {
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [customPlan, setCustomPlan] = useState(null);
 
   const fetchProgress = useCallback(async (userId) => {
     try {
@@ -22,27 +23,46 @@ const ProgramDetailPage = () => {
       setProgress(data || []);
     } catch (err) {
       console.error('Failed to fetch progress:', err);
-    } finally {
-      setLoading(false);
+    }
+  }, [id]);
+
+  const fetchCustomPlan = useCallback(async () => {
+    // Check sessionStorage first
+    const cached = sessionStorage.getItem('customPlans');
+    if (cached) {
+      const plans = JSON.parse(cached);
+      if (plans[id]) {
+        setCustomPlan(plans[id]);
+        return;
+      }
+    }
+    const planId = id.replace('custom-', '');
+    const { data } = await supabase.from('custom_plans').select('*').eq('id', planId).single();
+    if (data?.plan_data) {
+      const plan = typeof data.plan_data === 'string' ? JSON.parse(data.plan_data) : data.plan_data;
+      const full = { ...plan, id };
+      setCustomPlan(full);
+      const existing = cached ? JSON.parse(cached) : {};
+      sessionStorage.setItem('customPlans', JSON.stringify({ ...existing, [id]: full }));
     }
   }, [id]);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
-
-    if (!userData) {
-      navigate('/login');
-      return;
-    }
-
+    if (!userData) { navigate('/login'); return; }
     try {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      fetchProgress(parsedUser.id);
+      const load = async () => {
+        await fetchProgress(parsedUser.id);
+        if (id.startsWith('custom-')) await fetchCustomPlan();
+        setLoading(false);
+      };
+      load();
     } catch {
       navigate('/login');
     }
-  }, [navigate, id, fetchProgress]);
+  }, [navigate, id, fetchProgress, fetchCustomPlan]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -50,31 +70,46 @@ const ProgramDetailPage = () => {
     navigate('/');
   };
 
-  const isDayCompleted = (dayId) => {
-    return progress.some(p => p.day_id === dayId && p.completed);
-  };
+  const isDayCompleted = (dayId) => progress.some(p => p.day_id === dayId && p.completed);
 
-  // Get program data
-  const program = PROGRAMS.find(p => p.id === id);
   const WORKOUT_MAP = {
     'free-starter': FREE_STARTER_WORKOUTS,
+    'starter-2day': TWO_DAY_WORKOUTS,
     'starter': STARTER_WORKOUTS,
     'transformer': TRANSFORMER_WORKOUTS,
     'elite-beginner': ELITE_WORKOUTS,
+    'home-beginner': HOME_BEGINNER_WORKOUTS,
   };
-  const workoutData = WORKOUT_MAP[id] || null;
 
-  if (!user) {
-    return null;
-  }
+  const isCustom = id.startsWith('custom-');
+  const staticProgram = PROGRAMS.find(p => p.id === id);
+  const workoutData = isCustom ? customPlan : (WORKOUT_MAP[id] || null);
 
-  if (!program) {
+  // Build program meta for display
+  const program = isCustom && customPlan
+    ? {
+        name: customPlan.name || 'My Custom Program',
+        duration: `${customPlan.weeks?.length || 4} weeks`,
+        frequency: `${customPlan.daysPerWeek || 3}x per week`,
+        level: 'Custom',
+      }
+    : staticProgram;
+
+  if (!user) return null;
+
+  if (loading && !program) return (
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full" />
+    </div>
+  );
+
+  if (!loading && !program) {
     return (
       <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Program Not Found</h1>
-          <Button onClick={() => navigate('/my-programs')} className="bg-green-600 hover:bg-green-700">
-            Back to My Programs
+          <Button onClick={() => navigate('/dashboard')} className="bg-green-600 hover:bg-green-700">
+            Back to Dashboard
           </Button>
         </div>
       </div>

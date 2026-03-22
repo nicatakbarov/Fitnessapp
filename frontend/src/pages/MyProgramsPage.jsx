@@ -4,7 +4,7 @@ import { Dumbbell, LogOut, User, Play, ShoppingBag, ArrowRight, CheckCircle2, Ci
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS } from '../data/programs';
 
 const MyProgramsPage = () => {
   const navigate = useNavigate();
@@ -39,6 +39,8 @@ const MyProgramsPage = () => {
       setPurchases(purchasesData || []);
 
       const progressData = {};
+      const customPlansData = {};
+
       for (const purchase of (purchasesData || [])) {
         const { data: prog } = await supabase
           .from('progress')
@@ -46,8 +48,37 @@ const MyProgramsPage = () => {
           .eq('user_id', userId)
           .eq('program_id', purchase.program_id);
         progressData[purchase.program_id] = prog || [];
+
+        // Fetch custom plan data if program_id starts with 'custom-'
+        if (purchase.program_id.startsWith('custom-')) {
+          const customPlanId = purchase.program_id.replace('custom-', '');
+          const { data: customPlan } = await supabase
+            .from('custom_plans')
+            .select('*')
+            .eq('id', customPlanId)
+            .single();
+
+          if (customPlan && customPlan.plan_data) {
+            try {
+              const planData = typeof customPlan.plan_data === 'string'
+                ? JSON.parse(customPlan.plan_data)
+                : customPlan.plan_data;
+              customPlansData[purchase.program_id] = {
+                ...planData,
+                created_at: customPlan.created_at
+              };
+            } catch (e) {
+              console.error('Failed to parse custom plan data:', e);
+            }
+          }
+        }
       }
+
       setProgress(progressData);
+      // Store custom plans in sessionStorage for WORKOUT_MAP access
+      if (Object.keys(customPlansData).length > 0) {
+        sessionStorage.setItem('customPlans', JSON.stringify(customPlansData));
+      }
     } catch (err) {
       console.error('Failed to fetch data:', err);
     } finally {
@@ -61,12 +92,31 @@ const MyProgramsPage = () => {
     navigate('/');
   };
 
-  const WORKOUT_MAP = {
-    'free-starter': FREE_STARTER_WORKOUTS,
-    'starter': STARTER_WORKOUTS,
-    'transformer': TRANSFORMER_WORKOUTS,
-    'elite-beginner': ELITE_WORKOUTS,
+  // Build WORKOUT_MAP with pre-made and custom plans
+  const buildWorkoutMap = () => {
+    const baseMap = {
+      'free-starter': FREE_STARTER_WORKOUTS,
+      'starter': STARTER_WORKOUTS,
+      'transformer': TRANSFORMER_WORKOUTS,
+      'elite-beginner': ELITE_WORKOUTS,
+      'home-beginner': HOME_BEGINNER_WORKOUTS,
+    };
+
+    // Add custom plans from sessionStorage
+    const customPlans = sessionStorage.getItem('customPlans');
+    if (customPlans) {
+      try {
+        const customPlansData = JSON.parse(customPlans);
+        return { ...baseMap, ...customPlansData };
+      } catch (e) {
+        console.error('Failed to parse custom plans:', e);
+      }
+    }
+
+    return baseMap;
   };
+
+  const WORKOUT_MAP = buildWorkoutMap();
 
   const getAllDays = (programId) => {
     const data = WORKOUT_MAP[programId];
@@ -93,6 +143,27 @@ const MyProgramsPage = () => {
   const isDayCompleted = (programId, dayId) => {
     const prog = progress[programId] || [];
     return prog.some(p => p.day_id === dayId && p.completed);
+  };
+
+  const isCustomProgram = (programId) => programId.startsWith('custom-');
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   if (!user) {
@@ -184,10 +255,17 @@ const MyProgramsPage = () => {
                     {/* Header row */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <h3 className="font-heading text-xl font-bold text-white uppercase">
                             {purchase.program_name}
                           </h3>
+                          {isCustomProgram(purchase.program_id) && (
+                            <span
+                              className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            >
+                              Custom
+                            </span>
+                          )}
                           <span
                             data-testid={`status-badge-${purchase.program_id}`}
                             className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
@@ -199,6 +277,12 @@ const MyProgramsPage = () => {
                             {isComplete ? 'Completed' : 'Active'}
                           </span>
                         </div>
+
+                        {isCustomProgram(purchase.program_id) && WORKOUT_MAP[purchase.program_id]?.created_at && (
+                          <p className="text-xs text-zinc-500 mb-3">
+                            Created {formatDate(WORKOUT_MAP[purchase.program_id].created_at)}
+                          </p>
+                        )}
 
                         {totalDays > 0 && (
                           <div className="mt-3">
