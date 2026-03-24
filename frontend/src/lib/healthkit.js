@@ -8,14 +8,7 @@ const getPlugin = async () => {
   return CapacitorHealthkit;
 };
 
-const READ_PERMISSIONS = [
-  'HKQuantityTypeIdentifierStepCount',
-  'HKQuantityTypeIdentifierActiveEnergyBurned',
-  'HKQuantityTypeIdentifierHeartRate',
-  'HKCategoryTypeIdentifierSleepAnalysis',
-  'HKQuantityTypeIdentifierBodyMass',
-  'HKWorkoutTypeIdentifier',
-];
+const READ_PERMISSIONS = ['steps', 'calories', 'heartRate', 'activity', 'weight'];
 
 export const requestHealthPermissions = async () => {
   const plugin = await getPlugin();
@@ -35,7 +28,7 @@ export const getTodaySteps = async () => {
   try {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const res = await plugin.queryHKitSampleType({
-      sampleName: 'HKQuantityTypeIdentifierStepCount',
+      sampleName: 'stepCount',
       startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 0,
     });
     return Math.round((res.resultData || []).reduce((s, r) => s + (r.value || 0), 0));
@@ -48,7 +41,7 @@ export const getTodayCalories = async () => {
   try {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const res = await plugin.queryHKitSampleType({
-      sampleName: 'HKQuantityTypeIdentifierActiveEnergyBurned',
+      sampleName: 'activeEnergyBurned',
       startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 0,
     });
     return Math.round((res.resultData || []).reduce((s, r) => s + (r.value || 0), 0));
@@ -61,7 +54,7 @@ export const getLatestHeartRate = async () => {
   try {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const res = await plugin.queryHKitSampleType({
-      sampleName: 'HKQuantityTypeIdentifierHeartRate',
+      sampleName: 'heartRate',
       startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 0,
     });
     const data = res.resultData || [];
@@ -77,8 +70,8 @@ export const getWorkoutCaloriesAndHR = async (workoutStart) => {
     const start = workoutStart.toISOString();
     const end = new Date().toISOString();
     const [calRes, hrRes] = await Promise.all([
-      plugin.queryHKitSampleType({ sampleName: 'HKQuantityTypeIdentifierActiveEnergyBurned', startDate: start, endDate: end, limit: 0 }),
-      plugin.queryHKitSampleType({ sampleName: 'HKQuantityTypeIdentifierHeartRate', startDate: start, endDate: end, limit: 0 }),
+      plugin.queryHKitSampleType({ sampleName: 'activeEnergyBurned', startDate: start, endDate: end, limit: 0 }),
+      plugin.queryHKitSampleType({ sampleName: 'heartRate', startDate: start, endDate: end, limit: 0 }),
     ]);
     const calories = Math.round((calRes.resultData || []).reduce((s, r) => s + (r.value || 0), 0)) || null;
     const hrData = hrRes.resultData || [];
@@ -96,12 +89,12 @@ export const getSleepLast7Days = async () => {
     const end = new Date();
     const start = new Date(); start.setDate(start.getDate() - 7);
     const res = await plugin.queryHKitSampleType({
-      sampleName: 'HKCategoryTypeIdentifierSleepAnalysis',
+      sampleName: 'sleepAnalysis',
       startDate: start.toISOString(), endDate: end.toISOString(), limit: 0,
     });
     const nights = {};
     for (const r of (res.resultData || [])) {
-      if (r.value === 1) { // Asleep
+      if (r.value === 1) {
         const key = new Date(r.startDate).toISOString().split('T')[0];
         const mins = (new Date(r.endDate) - new Date(r.startDate)) / 60000;
         nights[key] = (nights[key] || 0) + mins;
@@ -120,7 +113,7 @@ export const getWeightHistory = async () => {
     const end = new Date();
     const start = new Date(); start.setMonth(start.getMonth() - 6);
     const res = await plugin.queryHKitSampleType({
-      sampleName: 'HKQuantityTypeIdentifierBodyMass',
+      sampleName: 'weight',
       startDate: start.toISOString(), endDate: end.toISOString(), limit: 0,
     });
     return (res.resultData || []).map(r => ({
@@ -154,7 +147,7 @@ export const getAppleWatchWorkouts = async () => {
     const end = new Date();
     const start = new Date(); start.setDate(start.getDate() - 30);
     const res = await plugin.queryHKitSampleType({
-      sampleName: 'HKWorkoutTypeIdentifier',
+      sampleName: 'workoutType',
       startDate: start.toISOString(), endDate: end.toISOString(), limit: 10,
     });
     return (res.resultData || [])
