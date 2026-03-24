@@ -1,7 +1,8 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
 import LandingPage from "./pages/LandingPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -15,13 +16,23 @@ import CreateCustomPlanPage from "./pages/CreateCustomPlanPage";
 import HomeSetupPage from "./pages/HomeSetupPage";
 import GeneratingPage from "./pages/GeneratingPage";
 
+// "/" route-unda: ilk açılışda onboarding, sonra landing page
+const RootRedirect = () => {
+  const onboardingDone = localStorage.getItem('onboarding_done');
+  const user = localStorage.getItem('user');
+  if (user) return <Navigate to="/dashboard" replace />;
+  if (!onboardingDone) return <Navigate to="/onboarding" replace />;
+  return <LandingPage />;
+};
+
 function App() {
   return (
     <LanguageProvider>
       <div className="App">
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />

@@ -43,6 +43,11 @@ body {
     color: #fafafa;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* iOS safe area (notch / Dynamic Island) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -77,6 +82,16 @@ h1, h2, h3, h4, h5, h6 {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #3f3f46;
+}
+
+/* Prevent iOS auto-zoom on input focus (font-size must be >= 16px) */
+input, select, textarea {
+    font-size: 16px !important;
+}
+
+/* iOS safe area for fixed navbars */
+.safe-nav {
+    padding-top: calc(env(safe-area-inset-top) + 1rem);
 }
 
 /* Glassmorphism utility */

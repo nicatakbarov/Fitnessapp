@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BottomNav from '../components/BottomNav';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, Play, ShoppingBag, ArrowRight, CheckCircle2, Circle, Lock } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -173,7 +174,7 @@ const MyProgramsPage = () => {
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="my-programs-page">
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
+      <nav className="safe-nav fixed top-0 left-0 right-0 z-50 glass">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
@@ -206,7 +207,7 @@ const MyProgramsPage = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="pt-24 pb-16 px-6">
+      <main className="pt-24 pb-24 px-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-12">
@@ -377,6 +378,7 @@ const MyProgramsPage = () => {
           )}
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 };

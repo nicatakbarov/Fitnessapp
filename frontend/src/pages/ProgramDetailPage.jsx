@@ -119,7 +119,7 @@ const ProgramDetailPage = () => {
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="program-detail-page">
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass py-4">
+      <nav className="safe-nav fixed top-0 left-0 right-0 z-50 glass">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
             <Dumbbell className="w-8 h-8 text-green-500" />
