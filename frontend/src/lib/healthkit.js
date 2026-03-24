@@ -1,11 +1,25 @@
 import { Capacitor } from '@capacitor/core';
 
-const isIOS = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+const isIOS = () => {
+  const native = Capacitor.isNativePlatform();
+  const platform = Capacitor.getPlatform();
+  console.log('[HealthKit] isNativePlatform:', native, '| platform:', platform);
+  return native && platform === 'ios';
+};
 
 const getPlugin = async () => {
-  if (!isIOS()) return null;
-  const { CapacitorHealthkit } = await import('@perfood/capacitor-healthkit');
-  return CapacitorHealthkit;
+  if (!isIOS()) {
+    console.log('[HealthKit] Not iOS native — skipping');
+    return null;
+  }
+  try {
+    const { CapacitorHealthkit } = await import('@perfood/capacitor-healthkit');
+    console.log('[HealthKit] Plugin loaded:', !!CapacitorHealthkit);
+    return CapacitorHealthkit;
+  } catch (e) {
+    console.error('[HealthKit] Plugin import failed:', e);
+    return null;
+  }
 };
 
 const READ_PERMISSIONS = ['steps', 'calories', 'heartRate', 'activity', 'weight'];
@@ -14,10 +28,12 @@ export const requestHealthPermissions = async () => {
   const plugin = await getPlugin();
   if (!plugin) return false;
   try {
+    console.log('[HealthKit] Requesting permissions:', READ_PERMISSIONS);
     await plugin.requestAuthorization({ all: [], read: READ_PERMISSIONS, write: [] });
+    console.log('[HealthKit] Permissions granted');
     return true;
   } catch (e) {
-    console.error('HealthKit permission error:', e);
+    console.error('[HealthKit] Permission error:', e);
     return false;
   }
 };
