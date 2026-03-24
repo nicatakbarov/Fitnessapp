@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper, PlayCircle, ChevronUp } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper, PlayCircle, ChevronUp, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase, getStoredUser } from '../lib/supabase';
+import { getWorkoutCaloriesAndHR } from '../lib/healthkit';
 import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS, TWO_DAY_WORKOUTS } from '../data/programs';
 import { getExerciseGif } from '../lib/getExerciseGif';
 
@@ -18,6 +19,8 @@ const DayWorkoutPage = () => {
   const [customPlan, setCustomPlan] = useState(null);
   const [expandedGif, setExpandedGif] = useState(null);
   const [weights, setWeights] = useState({});
+  const [workoutHealth, setWorkoutHealth] = useState({ calories: null, avgHeartRate: null });
+  const workoutStartRef = useRef(new Date());
 
   const toggleExercise = (key) => {
     setChecked(prev => ({ ...prev, [key]: !prev[key] }));
@@ -92,6 +95,8 @@ const DayWorkoutPage = () => {
         completed_at: new Date().toISOString(),
       }, { onConflict: 'user_id,program_id,day_id' });
       setIsCompleted(true);
+      const healthStats = await getWorkoutCaloriesAndHR(workoutStartRef.current);
+      setWorkoutHealth(healthStats);
       setShowCongrats(true);
       await fetchProgress(userData.id);
     } catch (err) {
@@ -180,12 +185,32 @@ const DayWorkoutPage = () => {
             <p className="text-zinc-400 mb-2">
               Day {dayData.dayNumber} complete!
             </p>
-            <p className="text-green-400 font-medium mb-6" data-testid="remaining-days-message">
-              {remainingDays > 0 
+            <p className="text-green-400 font-medium mb-4" data-testid="remaining-days-message">
+              {remainingDays > 0
                 ? `${remainingDays} day${remainingDays > 1 ? 's' : ''} remaining this week.`
                 : 'You completed all workouts this week! 🎉'
               }
             </p>
+
+            {(workoutHealth.calories !== null || workoutHealth.avgHeartRate !== null) && (
+              <div className="flex gap-3 mb-6">
+                {workoutHealth.calories !== null && (
+                  <div className="flex-1 bg-zinc-800 rounded-2xl p-3 text-center">
+                    <Flame className="w-5 h-5 text-orange-400 mx-auto mb-1" />
+                    <p className="text-xl font-bold text-white">{workoutHealth.calories}</p>
+                    <p className="text-xs text-zinc-500">kalori</p>
+                  </div>
+                )}
+                {workoutHealth.avgHeartRate !== null && (
+                  <div className="flex-1 bg-zinc-800 rounded-2xl p-3 text-center">
+                    <Heart className="w-5 h-5 text-red-400 mx-auto mb-1" />
+                    <p className="text-xl font-bold text-white">{workoutHealth.avgHeartRate}</p>
+                    <p className="text-xs text-zinc-500">bpm ortalama</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button
                 onClick={() => setShowCongrats(false)}

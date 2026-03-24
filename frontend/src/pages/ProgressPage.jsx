@@ -1,15 +1,19 @@
 import { useEffect, useState, useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
 import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Moon, Watch, Scale, Footprints, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
+import { getSleepLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions } from '../lib/healthkit';
 
 const ProgressPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sleepData, setSleepData] = useState([]);
+  const [weightData, setWeightData] = useState([]);
+  const [watchWorkouts, setWatchWorkouts] = useState([]);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -18,10 +22,23 @@ const ProgressPage = () => {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       fetchProgress(parsedUser.id);
+      fetchHealthData();
     } catch {
       navigate('/login');
     }
   }, [navigate]);
+
+  const fetchHealthData = async () => {
+    await requestHealthPermissions();
+    const [sleep, weight, workouts] = await Promise.all([
+      getSleepLast7Days(),
+      getWeightHistory(),
+      getAppleWatchWorkouts(),
+    ]);
+    setSleepData(sleep);
+    setWeightData(weight);
+    setWatchWorkouts(workouts);
+  };
 
   const fetchProgress = async (userId) => {
     try {
@@ -382,6 +399,116 @@ const ProgressPage = () => {
                   </div>
                 )}
               </section>
+
+              {/* Sleep Analysis */}
+              {sleepData.length > 0 && (
+                <section>
+                  <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
+                    <Moon className="w-5 h-5 text-purple-400" /> Yuxu Analizi
+                  </h2>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                    <div className="flex items-end justify-between gap-2 h-24 mb-3">
+                      {sleepData.map((d, i) => {
+                        const maxH = Math.max(...sleepData.map(s => s.hours), 1);
+                        const pct = Math.max(10, (d.hours / maxH) * 100);
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <span className="text-xs text-zinc-500">{d.hours}h</span>
+                            <div className="w-full rounded-t-md bg-purple-500/70" style={{ height: `${pct}%` }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between">
+                      {sleepData.map((d, i) => (
+                        <div key={i} className="flex-1 text-center">
+                          <span className="text-xs text-zinc-600">
+                            {new Date(d.date).toLocaleDateString('az', { weekday: 'short' })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
+                      <span className="text-sm text-zinc-400">Ortalama</span>
+                      <span className="text-sm font-bold text-white">
+                        {(sleepData.reduce((s, d) => s + d.hours, 0) / sleepData.length).toFixed(1)} saat
+                      </span>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Weight Trend */}
+              {weightData.length > 0 && (
+                <section>
+                  <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
+                    <Scale className="w-5 h-5 text-cyan-400" /> Çəki Trendi
+                  </h2>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                    {(() => {
+                      const last12 = weightData.slice(-12);
+                      const minW = Math.min(...last12.map(d => d.weight));
+                      const maxW = Math.max(...last12.map(d => d.weight));
+                      const range = maxW - minW || 1;
+                      const latest = last12[last12.length - 1];
+                      const first = last12[0];
+                      const diff = (latest.weight - first.weight).toFixed(1);
+                      return (
+                        <>
+                          <div className="flex items-end gap-1 h-20 mb-3">
+                            {last12.map((d, i) => {
+                              const pct = ((d.weight - minW) / range) * 70 + 15;
+                              return (
+                                <div key={i} className="flex-1 flex flex-col items-center justify-end">
+                                  <div
+                                    className="w-2 rounded-full bg-cyan-400"
+                                    style={{ height: `${pct}%` }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-2xl font-bold text-white">{latest.weight} kg</span>
+                            <span className={`text-sm font-medium ${+diff < 0 ? 'text-green-400' : +diff > 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                              {+diff > 0 ? '+' : ''}{diff} kg
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 mt-1">Apple Health-dən avtomatik sinxron</p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </section>
+              )}
+
+              {/* Apple Watch Workouts */}
+              {watchWorkouts.length > 0 && (
+                <section>
+                  <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
+                    <Watch className="w-5 h-5 text-zinc-300" /> Apple Watch Workoutları
+                  </h2>
+                  <div className="space-y-3">
+                    {watchWorkouts.slice(0, 5).map((w, i) => (
+                      <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg">⌚</div>
+                          <div>
+                            <p className="text-white font-medium">{w.type}</p>
+                            <p className="text-zinc-500 text-sm">
+                              {new Date(w.startDate).toLocaleDateString('az', { month: 'short', day: 'numeric' })} · {w.duration} dəq
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {w.calories && <p className="text-orange-400 text-sm font-medium">{w.calories} kal</p>}
+                          {w.distance && <p className="text-zinc-500 text-xs">{w.distance} km</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Workout History */}
               <section data-testid="workout-history">

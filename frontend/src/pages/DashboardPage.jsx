@@ -1,11 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import BottomNav from '../components/BottomNav';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Dumbbell, LogOut, User, Flame, CheckCircle2, Calendar, Trophy,
   ArrowRight, Clock, Zap, ChevronRight, Utensils, BarChart3,
-  FileText, Circle, Minus, X
+  FileText, Circle, Minus, X, Heart, Footprints, Activity
 } from 'lucide-react';
+import {
+  requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate
+} from '../lib/healthkit';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import ProgramSelectorModal from '../components/ProgramSelectorModal';
@@ -20,6 +23,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [customPlanData, setCustomPlanData] = useState(null);
   const [showProgramSelector, setShowProgramSelector] = useState(false);
+  const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null });
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -33,10 +37,21 @@ const DashboardPage = () => {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       fetchData(parsedUser.id);
+      fetchHealthData();
     } catch {
       navigate('/login');
     }
   }, [navigate]);
+
+  const fetchHealthData = async () => {
+    await requestHealthPermissions();
+    const [steps, calories, heartRate] = await Promise.all([
+      getTodaySteps(),
+      getTodayCalories(),
+      getLatestHeartRate(),
+    ]);
+    setHealthData({ steps, calories, heartRate });
+  };
 
   const fetchData = async (userId) => {
     try {
@@ -445,6 +460,53 @@ const DashboardPage = () => {
               }
             />
           </section>
+
+          {/* Today's Health */}
+          {(healthData.steps !== null || healthData.calories !== null || healthData.heartRate !== null) && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest">Today's Health</h2>
+                <span className="text-xs text-zinc-600">from Apple Health</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {/* Steps */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                  <Footprints className="w-5 h-5 text-blue-400 mb-1" />
+                  <span className="text-xl font-bold text-white">
+                    {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
+                  </span>
+                  <span className="text-xs text-zinc-500">addım</span>
+                  {healthData.steps !== null && (
+                    <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (healthData.steps / 10000) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  <span className="text-xs text-zinc-600">10k hədəf</span>
+                </div>
+                {/* Calories */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                  <Flame className="w-5 h-5 text-orange-400 mb-1" />
+                  <span className="text-xl font-bold text-white">
+                    {healthData.calories !== null ? healthData.calories : '—'}
+                  </span>
+                  <span className="text-xs text-zinc-500">kalori</span>
+                  <span className="text-xs text-zinc-600 mt-auto">aktiv</span>
+                </div>
+                {/* Heart Rate */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
+                  <Heart className="w-5 h-5 text-red-400 mb-1" />
+                  <span className="text-xl font-bold text-white">
+                    {healthData.heartRate !== null ? healthData.heartRate : '—'}
+                  </span>
+                  <span className="text-xs text-zinc-500">bpm</span>
+                  <span className="text-xs text-zinc-600 mt-auto">ürək</span>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Today's Workout */}
           <section
