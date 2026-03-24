@@ -1,45 +1,47 @@
 import { Capacitor } from '@capacitor/core';
 
-const isIOS = () => {
-  const native = Capacitor.isNativePlatform();
-  const platform = Capacitor.getPlatform();
-  console.log('[HealthKit] isNativePlatform:', native, '| platform:', platform);
-  return native && platform === 'ios';
-};
+const isIOS = () =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 
-const getPlugin = async () => {
-  if (!isIOS()) {
-    console.log('[HealthKit] Not iOS native — skipping');
-    return null;
-  }
+// Module-level cache — prevents thenable trap when returning plugin proxy from async fn
+let _hkPlugin = null;
+
+const initPlugin = async () => {
+  if (_hkPlugin !== null) return;
+  if (!isIOS()) return;
   try {
-    const { CapacitorHealthkit } = await import('@perfood/capacitor-healthkit');
-    console.log('[HealthKit] Plugin loaded:', !!CapacitorHealthkit);
-    return CapacitorHealthkit;
+    const mod = await import('@perfood/capacitor-healthkit');
+    // Wrap in plain object to break thenable chain
+    _hkPlugin = { instance: mod.CapacitorHealthkit };
+    console.log('[HealthKit] Plugin initialized');
   } catch (e) {
     console.error('[HealthKit] Plugin import failed:', e);
-    return null;
+    _hkPlugin = { instance: null };
   }
 };
+
+const getPlugin = () => _hkPlugin?.instance || null;
 
 const READ_PERMISSIONS = ['steps', 'calories', 'heartRate', 'activity', 'weight'];
 
 export const requestHealthPermissions = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return false;
   try {
-    console.log('[HealthKit] Requesting permissions:', READ_PERMISSIONS);
+    console.log('[HealthKit] Requesting permissions...');
     await plugin.requestAuthorization({ all: [], read: READ_PERMISSIONS, write: [] });
     console.log('[HealthKit] Permissions granted');
     return true;
   } catch (e) {
-    console.error('[HealthKit] Permission error:', e);
+    console.error('[HealthKit] Permission error:', e.message || String(e));
     return false;
   }
 };
 
 export const getTodaySteps = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return null;
   try {
     const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -48,11 +50,15 @@ export const getTodaySteps = async () => {
       startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 0,
     });
     return Math.round((res.resultData || []).reduce((s, r) => s + (r.value || 0), 0));
-  } catch { return null; }
+  } catch (e) {
+    console.error('[HealthKit] steps error:', e.message || String(e));
+    return null;
+  }
 };
 
 export const getTodayCalories = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return null;
   try {
     const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -61,11 +67,15 @@ export const getTodayCalories = async () => {
       startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 0,
     });
     return Math.round((res.resultData || []).reduce((s, r) => s + (r.value || 0), 0));
-  } catch { return null; }
+  } catch (e) {
+    console.error('[HealthKit] calories error:', e.message || String(e));
+    return null;
+  }
 };
 
 export const getLatestHeartRate = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return null;
   try {
     const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -76,11 +86,15 @@ export const getLatestHeartRate = async () => {
     const data = res.resultData || [];
     if (!data.length) return null;
     return Math.round(data[data.length - 1].value);
-  } catch { return null; }
+  } catch (e) {
+    console.error('[HealthKit] heartRate error:', e.message || String(e));
+    return null;
+  }
 };
 
 export const getWorkoutCaloriesAndHR = async (workoutStart) => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return { calories: null, avgHeartRate: null };
   try {
     const start = workoutStart.toISOString();
@@ -95,11 +109,15 @@ export const getWorkoutCaloriesAndHR = async (workoutStart) => {
       ? Math.round(hrData.reduce((s, r) => s + r.value, 0) / hrData.length)
       : null;
     return { calories, avgHeartRate };
-  } catch { return { calories: null, avgHeartRate: null }; }
+  } catch (e) {
+    console.error('[HealthKit] workout stats error:', e.message || String(e));
+    return { calories: null, avgHeartRate: null };
+  }
 };
 
 export const getSleepLast7Days = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return [];
   try {
     const end = new Date();
@@ -119,11 +137,15 @@ export const getSleepLast7Days = async () => {
     return Object.entries(nights)
       .map(([date, mins]) => ({ date, hours: +(mins / 60).toFixed(1) }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  } catch { return []; }
+  } catch (e) {
+    console.error('[HealthKit] sleep error:', e.message || String(e));
+    return [];
+  }
 };
 
 export const getWeightHistory = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return [];
   try {
     const end = new Date();
@@ -136,28 +158,24 @@ export const getWeightHistory = async () => {
       date: r.startDate,
       weight: +r.value.toFixed(1),
     }));
-  } catch { return []; }
+  } catch (e) {
+    console.error('[HealthKit] weight error:', e.message || String(e));
+    return [];
+  }
 };
 
 const WORKOUT_TYPE_NAMES = {
   1: 'American Football', 2: 'Archery', 3: 'Australian Football', 4: 'Badminton',
   5: 'Baseball', 6: 'Basketball', 7: 'Bowling', 8: 'Boxing',
   9: 'Climbing', 10: 'Cricket', 11: 'Cross Training', 12: 'Curling',
-  13: 'Cycling', 16: 'Elliptical', 17: 'Equestrian Sports', 18: 'Fencing',
-  19: 'Fishing', 20: 'Functional Strength Training', 21: 'Golf', 22: 'Gymnastics',
-  23: 'Handball', 24: 'Hiking', 25: 'Hockey', 26: 'Hunting',
-  27: 'Lacrosse', 28: 'Martial Arts', 29: 'Mind and Body', 31: 'Paddle Sports',
-  32: 'Play', 33: 'Preparation and Recovery', 34: 'Racquetball', 35: 'Rowing',
-  36: 'Rugby', 37: 'Running', 38: 'Sailing', 39: 'Skating Sports',
-  40: 'Snow Sports', 41: 'Soccer', 42: 'Softball', 43: 'Squash',
-  44: 'Stair Climbing', 45: 'Surfing Sports', 46: 'Swimming', 47: 'Table Tennis',
-  48: 'Tennis', 49: 'Track and Field', 50: 'Traditional Strength Training',
-  51: 'Volleyball', 52: 'Walking', 53: 'Water Fitness', 54: 'Water Polo',
-  55: 'Water Sports', 56: 'Wrestling', 57: 'Yoga', 3000: 'Other',
+  13: 'Cycling', 16: 'Elliptical', 20: 'Functional Strength', 21: 'Golf',
+  24: 'Hiking', 37: 'Running', 46: 'Swimming', 50: 'Traditional Strength',
+  52: 'Walking', 57: 'Yoga', 3000: 'Other',
 };
 
 export const getAppleWatchWorkouts = async () => {
-  const plugin = await getPlugin();
+  await initPlugin();
+  const plugin = getPlugin();
   if (!plugin) return [];
   try {
     const end = new Date();
@@ -175,5 +193,8 @@ export const getAppleWatchWorkouts = async () => {
         distance: r.totalDistance ? +(r.totalDistance / 1000).toFixed(2) : null,
       }))
       .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
-  } catch { return []; }
+  } catch (e) {
+    console.error('[HealthKit] workouts error:', e.message || String(e));
+    return [];
+  }
 };
