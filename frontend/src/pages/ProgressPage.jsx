@@ -401,12 +401,15 @@ const ProgressPage = () => {
               </section>
 
               {/* Sleep Analysis */}
-              {sleepData.length > 0 && (
-                <section>
+              <section>
                   <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
                     <Moon className="w-5 h-5 text-purple-400" /> Yuxu Analizi
                   </h2>
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                  {sleepData.length === 0 ? (
+                    <p className="text-zinc-500 text-sm text-center py-4">Health app-də yuxu məlumatı tapılmadı. Apple Watch ilə yuxu izləməni aktiv et.</p>
+                  ) : (
+                    <>
                     <div className="flex items-end justify-between gap-2 h-24 mb-3">
                       {sleepData.map((d, i) => {
                         const maxH = Math.max(...sleepData.map(s => s.hours), 1);
@@ -434,18 +437,21 @@ const ProgressPage = () => {
                         {(sleepData.reduce((s, d) => s + d.hours, 0) / sleepData.length).toFixed(1)} saat
                       </span>
                     </div>
+                    </>
+                  )}
                   </div>
                 </section>
-              )}
 
               {/* Weight Trend */}
-              {weightData.length > 0 && (
-                <section>
+              <section>
                   <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
                     <Scale className="w-5 h-5 text-cyan-400" /> Çəki Trendi
                   </h2>
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
-                    {(() => {
+                  {weightData.length === 0 ? (
+                    <p className="text-zinc-500 text-sm text-center py-4">Health app-də çəki məlumatı tapılmadı. Health app-dən əl ilə əlavə edə bilərsən.</p>
+                  ) : (
+                    <>{(() => {
                       const last12 = weightData.slice(-12);
                       const minW = Math.min(...last12.map(d => d.weight));
                       const maxW = Math.max(...last12.map(d => d.weight));
@@ -477,17 +483,21 @@ const ProgressPage = () => {
                           <p className="text-xs text-zinc-500 mt-1">Apple Health-dən avtomatik sinxron</p>
                         </>
                       );
-                    })()}
+                    })()}</>
+                  )}
                   </div>
                 </section>
-              )}
 
               {/* Apple Watch Workouts */}
-              {watchWorkouts.length > 0 && (
-                <section>
+              <section>
                   <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
                     <Watch className="w-5 h-5 text-zinc-300" /> Apple Watch Workoutları
                   </h2>
+                  {watchWorkouts.length === 0 ? (
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                      <p className="text-zinc-500 text-sm text-center py-4">Son 30 günə aid Apple Watch workout tapılmadı.</p>
+                    </div>
+                  ) : (
                   <div className="space-y-3">
                     {watchWorkouts.slice(0, 5).map((w, i) => (
                       <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
@@ -507,8 +517,8 @@ const ProgressPage = () => {
                       </div>
                     ))}
                   </div>
+                  )}
                 </section>
-              )}
 
               {/* Workout History */}
               <section data-testid="workout-history">
