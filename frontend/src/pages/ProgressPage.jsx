@@ -28,6 +28,16 @@ const ProgressPage = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchHealthData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchHealthData = async () => {
     await requestHealthPermissions();
     const [sleep, weight, workouts] = await Promise.all([

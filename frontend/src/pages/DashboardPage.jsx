@@ -43,13 +43,26 @@ const DashboardPage = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchHealthData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchHealthData = async () => {
-    await requestHealthPermissions();
+    console.log('[Dashboard] fetchHealthData started');
+    const permResult = await requestHealthPermissions();
+    console.log('[Dashboard] permResult:', permResult);
     const [steps, calories, heartRate] = await Promise.all([
       getTodaySteps(),
       getTodayCalories(),
       getLatestHeartRate(),
     ]);
+    console.log('[Dashboard] health results:', { steps, calories, heartRate });
     setHealthData({ steps, calories, heartRate });
   };
 
