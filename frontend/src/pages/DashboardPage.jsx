@@ -483,39 +483,61 @@ const DashboardPage = () => {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {/* Steps */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
-                  <Footprints className="w-5 h-5 text-blue-400 mb-1" />
-                  <span className="text-xl font-bold text-white">
-                    {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
-                  </span>
-                  <span className="text-xs text-zinc-500">addım</span>
-                  {healthData.steps !== null && (
-                    <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (healthData.steps / 10000) * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                  <span className="text-xs text-zinc-600">10k hədəf</span>
+                <div className="bg-zinc-950 rounded-2xl overflow-hidden flex flex-col" style={{minHeight:'120px'}}>
+                  <div className="p-3 pb-0 flex-1">
+                    <span className="text-3xl font-bold text-white leading-none block">
+                      {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 mt-0.5 block">steps</span>
+                  </div>
+                  <svg viewBox="0 0 120 40" preserveAspectRatio="none" className="w-full h-10 mt-2" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="stepsGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,40 L0,30 L15,22 L30,28 L45,10 L60,18 L75,8 L90,20 L105,14 L120,22 L120,40 Z" fill="url(#stepsGrad)" />
+                    <path d="M0,30 L15,22 L30,28 L45,10 L60,18 L75,8 L90,20 L105,14 L120,22" fill="none" stroke="#2dd4bf" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </div>
                 {/* Calories */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
-                  <Flame className="w-5 h-5 text-orange-400 mb-1" />
-                  <span className="text-xl font-bold text-white">
-                    {healthData.calories !== null ? healthData.calories : '—'}
-                  </span>
-                  <span className="text-xs text-zinc-500">kalori</span>
-                  <span className="text-xs text-zinc-600 mt-auto">aktiv</span>
+                <div className="bg-zinc-950 rounded-2xl overflow-hidden flex flex-col" style={{minHeight:'120px'}}>
+                  <div className="p-3 pb-0 flex-1">
+                    <span className="text-3xl font-bold text-white leading-none block">
+                      {healthData.calories !== null ? healthData.calories : '—'}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 mt-0.5 block">kcal</span>
+                  </div>
+                  <svg viewBox="0 0 120 40" preserveAspectRatio="none" className="w-full h-10 mt-2" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="calsGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,40 C10,40 10,25 20,25 C30,25 30,32 40,32 C50,32 50,15 60,15 C70,15 70,28 80,28 C90,28 90,10 100,10 C110,10 110,20 120,20 L120,40 Z" fill="url(#calsGrad)" />
+                    <path d="M0,25 C10,25 10,25 20,25 C30,25 30,32 40,32 C50,32 50,15 60,15 C70,15 70,28 80,28 C90,28 90,10 100,10 C110,10 110,20 120,20" fill="none" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </div>
                 {/* Heart Rate */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
-                  <Heart className="w-5 h-5 text-red-400 mb-1" />
-                  <span className="text-xl font-bold text-white">
-                    {healthData.heartRate !== null ? healthData.heartRate : '—'}
-                  </span>
-                  <span className="text-xs text-zinc-500">bpm</span>
-                  <span className="text-xs text-zinc-600 mt-auto">ürək</span>
+                <div className="bg-zinc-950 rounded-2xl overflow-hidden flex flex-col" style={{minHeight:'120px'}}>
+                  <div className="p-3 pb-0 flex-1">
+                    <span className="text-3xl font-bold text-white leading-none block">
+                      {healthData.heartRate !== null ? healthData.heartRate : '—'}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 mt-0.5 block">BPM</span>
+                  </div>
+                  <svg viewBox="0 0 120 40" preserveAspectRatio="none" className="w-full h-10 mt-2" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="hrGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,20 L20,20 L25,5 L30,35 L35,20 L55,20 L60,5 L65,35 L70,20 L90,20 L95,5 L100,35 L105,20 L120,20" fill="none" stroke="#f43f5e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M0,20 L20,20 L25,5 L30,35 L35,20 L55,20 L60,5 L65,35 L70,20 L90,20 L95,5 L100,35 L105,20 L120,20 L120,40 L0,40 Z" fill="url(#hrGrad)" />
+                  </svg>
                 </div>
               </div>
             </section>
