@@ -475,78 +475,105 @@ const DashboardPage = () => {
           </section>
 
           {/* Today's Health */}
-          {(healthData.steps !== null || healthData.calories !== null || healthData.heartRate !== null) && (
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest">Today's Health</h2>
-                <span className="text-xs text-zinc-600">from Apple Health</span>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {/* Steps */}
-                <div className="bg-zinc-950 rounded-2xl overflow-hidden flex flex-col" style={{minHeight:'140px'}}>
-                  <div className="p-3 pb-0 flex-1">
-                    <span className="text-4xl font-bold text-white leading-none block">
-                      {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
-                    </span>
-                    <span className="text-xs text-zinc-500 mt-1 block">steps</span>
-                  </div>
-                  <svg viewBox="0 0 120 50" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="stepsGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.5" />
-                        <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M0,50 L0,38 L15,28 L30,36 L45,12 L60,22 L75,8 L90,24 L105,16 L120,26 L120,50 Z" fill="url(#stepsGrad)" />
-                    <path d="M0,38 L15,28 L30,36 L45,12 L60,22 L75,8 L90,24 L105,16 L120,26" fill="none" stroke="#2dd4bf" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+          {(healthData.steps !== null || healthData.calories !== null || healthData.heartRate !== null) && (() => {
+            const dayBars   = [2,3,1,4,2,3,5,2,1,3,2,4,3,12,18,22,20,15,8,6,4,3,2,5,3,4,2,3,1,2];
+            const sleepBars = [0,0,0,0,6,16,20,14,18,16,20,18,16,22,18,16,20,14,12,8,4,0,0,0,0,0,0,0,0,0];
+            const W = {borderRadius:'20px',padding:'14px',display:'flex',flexDirection:'column',aspectRatio:'1',overflow:'hidden'};
+            const iconBox = (bg) => ({background:bg,borderRadius:'50%',width:'34px',height:'34px',display:'flex',alignItems:'center',justifyContent:'center'});
+            const timeRow = {display:'flex',justifyContent:'space-between',fontSize:'9px',color:'rgba(255,255,255,0.25)'};
+            return (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest">Today's Health</h2>
+                  <span className="text-xs text-zinc-600">from Apple Health</span>
                 </div>
-                {/* Calories */}
-                <div className="bg-zinc-950 rounded-2xl overflow-hidden flex flex-col" style={{minHeight:'140px'}}>
-                  <div className="p-3 pb-0 flex-1">
-                    <span className="text-4xl font-bold text-white leading-none block">
-                      {healthData.calories !== null ? healthData.calories : '—'}
-                    </span>
-                    <span className="text-xs text-zinc-500 mt-1 block">kcal</span>
-                  </div>
-                  <svg viewBox="0 0 120 50" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="calsGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.5" />
-                        <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M0,50 C10,50 10,32 20,32 C30,32 30,40 40,40 C50,40 50,18 60,18 C70,18 70,34 80,34 C90,34 90,10 100,10 C110,10 110,22 120,22 L120,50 Z" fill="url(#calsGrad)" />
-                    <path d="M0,32 C10,32 10,32 20,32 C30,32 30,40 40,40 C50,40 50,18 60,18 C70,18 70,34 80,34 C90,34 90,10 100,10 C110,10 110,22 120,22" fill="none" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                {/* Heart Rate */}
-                <div className="bg-zinc-950 rounded-2xl overflow-hidden flex flex-col" style={{minHeight:'140px'}}>
-                  <div className="p-3 pb-0 flex-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-white leading-none">
-                        {healthData.heartRate !== null ? healthData.heartRate : '—'}
-                      </span>
-                      <span className="text-xs text-zinc-500">BPM</span>
+                <div className="grid grid-cols-2 gap-3">
+
+                  {/* Widget 1: Steps — green */}
+                  <div style={{...W, background:'#162b1a'}}>
+                    <div style={{marginBottom:'6px'}}>
+                      <div style={iconBox('#1f3d25')}><Footprints size={16} color="#4ade80" /></div>
                     </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:'28px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
+                        {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
+                      </div>
+                      <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginTop:'3px'}}>of 10 000 steps</div>
+                    </div>
+                    <svg viewBox="0 0 183 28" style={{width:'100%',height:'28px',marginBottom:'3px'}} aria-hidden="true">
+                      {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={28-h} width="4" height={Math.max(h,1)} rx="1" fill="#4ade80" opacity={h>7?1:0.28} />)}
+                    </svg>
+                    <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
                   </div>
-                  <svg viewBox="0 0 120 50" preserveAspectRatio="none" className="w-full h-14" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="hrGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {/* Second wave (offset, dimmer) */}
-                    <path d="M-10,25 L10,25 L15,8 L20,42 L25,25 L45,25 L50,8 L55,42 L60,25 L80,25 L85,8 L90,42 L95,25 L115,25 L120,18" fill="none" stroke="#f43f5e" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.35" />
-                    {/* Main wave */}
-                    <path d="M0,25 L20,25 L25,6 L30,44 L35,25 L55,25 L60,6 L65,44 L70,25 L90,25 L95,6 L100,44 L105,25 L120,25" fill="none" stroke="#f43f5e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
-                    <path d="M0,25 L20,25 L25,6 L30,44 L35,25 L55,25 L60,6 L65,44 L70,25 L90,25 L95,6 L100,44 L105,25 L120,25 L120,50 L0,50 Z" fill="url(#hrGrad)" />
-                  </svg>
+
+                  {/* Widget 2: Heart Rate — purple */}
+                  <div style={{...W, background:'#1a0e3a'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'6px'}}>
+                      <div style={iconBox('#2d1a5e')}><Heart size={16} color="#f472b6" /></div>
+                      <div style={{textAlign:'right'}}>
+                        <div style={{fontSize:'14px',fontWeight:'700',color:'#f472b6',lineHeight:1}}>
+                          {healthData.heartRate !== null ? `${healthData.heartRate} BPM` : '— BPM'}
+                        </div>
+                        <div style={{fontSize:'9px',color:'#f472b6',opacity:0.6,marginTop:'2px'}}>♥ Avg</div>
+                      </div>
+                    </div>
+                    <div style={{flex:1}} />
+                    <svg viewBox="0 0 183 28" style={{width:'100%',height:'28px',marginBottom:'3px'}} aria-hidden="true">
+                      {sleepBars.map((h,i) => h > 0 ? <rect key={i} x={i*6+1} y={28-h} width="4" height={h} rx="1" fill="#38bdf8" opacity="0.75" /> : null)}
+                    </svg>
+                    <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                  </div>
+
+                  {/* Widget 3: Calories — dark red */}
+                  <div style={{...W, background:'#2d1010'}}>
+                    <div style={{marginBottom:'6px'}}>
+                      <div style={iconBox('#4a1515')}><Flame size={16} color="#f97316" /></div>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{display:'flex',alignItems:'baseline',gap:'3px'}}>
+                        <span style={{fontSize:'28px',fontWeight:'800',color:'#ff6b35',lineHeight:1,letterSpacing:'-0.5px'}}>
+                          {healthData.calories !== null ? healthData.calories : '—'}
+                        </span>
+                        <span style={{fontSize:'13px',color:'rgba(249,115,22,0.6)',fontWeight:'600'}}>kcal</span>
+                      </div>
+                      <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginTop:'3px'}}>of 600 kcal burn</div>
+                    </div>
+                    <svg viewBox="0 0 183 28" style={{width:'100%',height:'28px',marginBottom:'3px'}} aria-hidden="true">
+                      {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={28-h} width="4" height={Math.max(h,1)} rx="1" fill="#f97316" opacity={h>7?1:0.28} />)}
+                    </svg>
+                    <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                  </div>
+
+                  {/* Widget 4: Summary — dark charcoal */}
+                  <div style={{...W, background:'#1a1a28'}}>
+                    <div style={{marginBottom:'8px'}}>
+                      <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+                        <circle cx="20" cy="20" r="17" stroke="#ff6b35" strokeWidth="3.5" fill="none" strokeDasharray="75 32" strokeLinecap="round" transform="rotate(-90 20 20)" />
+                        <circle cx="20" cy="20" r="12" stroke="#4ade80" strokeWidth="3.5" fill="none" strokeDasharray="55 20" strokeLinecap="round" transform="rotate(-90 20 20)" />
+                        <circle cx="20" cy="20" r="7"  stroke="#38bdf8" strokeWidth="3.5" fill="none" strokeDasharray="32 12" strokeLinecap="round" transform="rotate(-90 20 20)" />
+                      </svg>
+                    </div>
+                    <div style={{flex:1,display:'flex',flexDirection:'column',gap:'6px',justifyContent:'center'}}>
+                      <div>
+                        <span style={{fontSize:'16px',fontWeight:'700',color:'#f97316'}}>{healthData.calories !== null ? healthData.calories : '—'}</span>
+                        <span style={{fontSize:'10px',color:'rgba(249,115,22,0.6)',marginLeft:'3px',fontWeight:'600'}}>KCAL</span>
+                      </div>
+                      <div>
+                        <span style={{fontSize:'16px',fontWeight:'700',color:'#4ade80'}}>{healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}</span>
+                        <span style={{fontSize:'10px',color:'rgba(74,222,128,0.6)',marginLeft:'3px',fontWeight:'600'}}>STEPS</span>
+                      </div>
+                      <div>
+                        <span style={{fontSize:'16px',fontWeight:'700',color:'#f472b6'}}>{healthData.heartRate !== null ? healthData.heartRate : '—'}</span>
+                        <span style={{fontSize:'10px',color:'rgba(244,114,182,0.6)',marginLeft:'3px',fontWeight:'600'}}>BPM</span>
+                      </div>
+                    </div>
+                    <div style={{fontSize:'10px',color:'rgba(255,255,255,0.25)'}}>Today's activity</div>
+                  </div>
+
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            );
+          })()}
 
           {/* Today's Workout */}
           <section
