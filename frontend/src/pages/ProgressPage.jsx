@@ -15,6 +15,8 @@ const ProgressPage = () => {
   const [weightData, setWeightData] = useState([]);
   const [watchWorkouts, setWatchWorkouts] = useState([]);
   const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
+  const [showWeightInput, setShowWeightInput] = useState(false);
+  const [weightInput, setWeightInput] = useState('');
   const isFetching = useRef(false);
 
   useEffect(() => {
@@ -86,6 +88,42 @@ const ProgressPage = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/');
+  };
+
+  // Body weight history — merged from HealthKit + localStorage
+  const bodyWeightHistory = useMemo(() => {
+    const lsKey = user ? `body_weights_${user.id}` : null;
+    const lsEntries = lsKey
+      ? JSON.parse(localStorage.getItem(lsKey) || '[]')
+      : [];
+    // HealthKit entries
+    const hkEntries = (weightData || []).map(w => ({ date: w.date, weight: w.weight, source: 'hk' }));
+    // Merge — prefer most recent per day
+    const map = {};
+    [...hkEntries, ...lsEntries].forEach(e => {
+      const day = e.date?.slice(0, 10);
+      if (day) map[day] = e;
+    });
+    return Object.values(map).sort((a, b) => a.date > b.date ? 1 : -1);
+  }, [weightData, user]);
+
+  const latestBodyWeight = bodyWeightHistory.length
+    ? bodyWeightHistory[bodyWeightHistory.length - 1].weight
+    : null;
+
+  const addBodyWeight = () => {
+    const val = parseFloat(weightInput.replace(',', '.'));
+    if (!val || val < 20 || val > 300 || !user) return;
+    const lsKey = `body_weights_${user.id}`;
+    const existing = JSON.parse(localStorage.getItem(lsKey) || '[]');
+    const today = new Date().toISOString().slice(0, 10);
+    const filtered = existing.filter(e => e.date?.slice(0, 10) !== today);
+    const updated = [...filtered, { date: new Date().toISOString(), weight: val }];
+    localStorage.setItem(lsKey, JSON.stringify(updated));
+    setWeightInput('');
+    setShowWeightInput(false);
+    // Force re-render by toggling weightData
+    setWeightData(prev => [...prev]);
   };
 
   // Weight history from localStorage
@@ -296,7 +334,6 @@ const ProgressPage = () => {
           {(() => {
                 const zeroBars  = Array(30).fill(2);
                 const dayBars   = (healthData.steps || 0) > 0 ? [6,10,4,12,6,10,17,6,4,10,8,14,12,62,108,145,128,95,46,29,17,10,6,21,10,14,8,10,4,8] : zeroBars;
-                const sleepBars = (healthData.sleepHours || 0) > 0 ? [0,0,0,0,29,91,132,87,115,103,132,115,103,140,115,103,132,87,70,41,21,0,0,0,0,0,0,0,0,0] : zeroBars;
                 const W = {borderRadius:'20px',padding:'14px',display:'flex',flexDirection:'column',aspectRatio:'1',overflow:'hidden'};
                 const iconBox = (bg) => ({background:bg,borderRadius:'50%',width:'26px',height:'26px',display:'flex',alignItems:'center',justifyContent:'center'});
                 const timeRow = {display:'flex',justifyContent:'space-between',fontSize:'10px',color:'rgba(255,255,255,0.25)'};
@@ -358,25 +395,74 @@ const ProgressPage = () => {
                         </svg>
                         <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
                       </div>
-                      {/* Widget 4: Sleep */}
-                      <div style={{...W, background:'#0e1a2e'}}>
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
-                          <div style={iconBox('#152540')}><Moon size={12} color="#818cf8" /></div>
-                          <div style={{textAlign:'right'}}>
-                            <div style={{display:'flex',alignItems:'baseline',gap:'3px',justifyContent:'flex-end'}}>
-                              <span style={{fontSize:'32px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
-                                {healthData.sleepHours !== null ? healthData.sleepHours : '—'}
-                              </span>
-                              <span style={{fontSize:'14px',color:'rgba(129,140,248,0.7)',fontWeight:'600'}}>saat</span>
-                            </div>
-                            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>dünən gecə</div>
+                      {/* Widget 4: Body Weight */}
+                      {(() => {
+                        const last7 = bodyWeightHistory.slice(-7);
+                        const maxW = Math.max(...last7.map(e => e.weight), 1);
+                        const minW = Math.min(...last7.map(e => e.weight), maxW - 1);
+                        const range = maxW - minW || 1;
+                        const wBars = last7.length > 0
+                          ? last7.map(e => Math.round(((e.weight - minW) / range) * 120 + 20))
+                          : Array(7).fill(2);
+                        return (
+                          <div
+                            onClick={() => setShowWeightInput(v => !v)}
+                            style={{...W, background:'#0e2420', cursor:'pointer', position:'relative'}}
+                          >
+                            {showWeightInput ? (
+                              <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',flex:1,gap:'10px'}}
+                                onClick={e => e.stopPropagation()}>
+                                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Çəkini daxil et (kg)</div>
+                                <input
+                                  autoFocus
+                                  type="number"
+                                  value={weightInput}
+                                  onChange={e => setWeightInput(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') addBodyWeight(); if (e.key === 'Escape') setShowWeightInput(false); }}
+                                  placeholder="70.5"
+                                  style={{
+                                    background:'rgba(255,255,255,0.08)',border:'1px solid rgba(52,211,153,0.4)',
+                                    borderRadius:'10px',padding:'8px 12px',color:'white',fontSize:'20px',
+                                    fontWeight:'700',width:'100%',textAlign:'center',outline:'none',
+                                  }}
+                                />
+                                <button
+                                  onClick={addBodyWeight}
+                                  style={{background:'#34d399',border:'none',borderRadius:'10px',
+                                    padding:'8px 0',width:'100%',color:'#0a2e20',fontWeight:'700',
+                                    fontSize:'13px',cursor:'pointer'}}
+                                >
+                                  Saxla
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
+                                  <div style={iconBox('#163a2e')}><Scale size={12} color="#34d399" /></div>
+                                  <div style={{textAlign:'right'}}>
+                                    <div style={{display:'flex',alignItems:'baseline',gap:'3px',justifyContent:'flex-end'}}>
+                                      <span style={{fontSize:'32px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
+                                        {latestBodyWeight !== null ? latestBodyWeight : '—'}
+                                      </span>
+                                      <span style={{fontSize:'14px',color:'rgba(52,211,153,0.7)',fontWeight:'600'}}>kg</span>
+                                    </div>
+                                    <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>bədən çəkisi</div>
+                                  </div>
+                                </div>
+                                <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
+                                  {wBars.map((h, i) => (
+                                    <rect key={i} x={i * 26 + 2} y={150 - h} width="20" height={Math.max(h, 2)} rx="4"
+                                      fill="#34d399" opacity={i === wBars.length - 1 ? 1 : 0.45} />
+                                  ))}
+                                </svg>
+                                <div style={{...timeRow,color:'rgba(52,211,153,0.35)'}}>
+                                  <span>+ tap to add</span>
+                                </div>
+                              </>
+                            )}
                           </div>
-                        </div>
-                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
-                          {sleepBars.map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#818cf8" opacity={h>20?0.85:0.2} />)}
-                        </svg>
-                        <div style={timeRow}><span>20:00</span><span>0:00</span><span>8:00</span></div>
-                      </div>
+                        );
+                      })()}
                     </div>
                   </section>
                 );
