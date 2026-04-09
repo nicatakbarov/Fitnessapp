@@ -397,20 +397,14 @@ const ProgressPage = () => {
                       </div>
                       {/* Widget 4: Body Weight */}
                       {(() => {
-                        const last7 = bodyWeightHistory.slice(-7);
-                        const maxW = Math.max(...last7.map(e => e.weight), 1);
-                        const minW = Math.min(...last7.map(e => e.weight), maxW - 1);
-                        const range = maxW - minW || 1;
-                        const wBars = last7.length > 0
-                          ? last7.map(e => Math.round(((e.weight - minW) / range) * 120 + 20))
-                          : Array(7).fill(2);
                         return (
                           <div
                             onClick={() => setShowWeightInput(v => !v)}
-                            style={{...W, background:'#0e2420', cursor:'pointer', position:'relative'}}
+                            style={{...W, background:'#0e2420', cursor:'pointer', justifyContent:'center', alignItems:'center'}}
                           >
                             {showWeightInput ? (
-                              <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',flex:1,gap:'10px'}}
+                              /* ── Input mode ── */
+                              <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',width:'100%',gap:'10px'}}
                                 onClick={e => e.stopPropagation()}>
                                 <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Çəkini daxil et (kg)</div>
                                 <input
@@ -435,30 +429,29 @@ const ProgressPage = () => {
                                   Saxla
                                 </button>
                               </div>
+                            ) : latestBodyWeight === null ? (
+                              /* ── Empty state: big "+" ── */
+                              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px'}}>
+                                <div style={{
+                                  width:'52px',height:'52px',borderRadius:'50%',
+                                  border:'2px solid rgba(52,211,153,0.35)',
+                                  display:'flex',alignItems:'center',justifyContent:'center',
+                                }}>
+                                  <span style={{fontSize:'28px',color:'rgba(52,211,153,0.6)',lineHeight:1,marginTop:'-2px'}}>+</span>
+                                </div>
+                                <span style={{fontSize:'11px',color:'rgba(255,255,255,0.25)',letterSpacing:'0.05em'}}>çəki əlavə et</span>
+                              </div>
                             ) : (
-                              <>
-                                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
-                                  <div style={iconBox('#163a2e')}><Scale size={12} color="#34d399" /></div>
-                                  <div style={{textAlign:'right'}}>
-                                    <div style={{display:'flex',alignItems:'baseline',gap:'3px',justifyContent:'flex-end'}}>
-                                      <span style={{fontSize:'32px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
-                                        {latestBodyWeight !== null ? latestBodyWeight : '—'}
-                                      </span>
-                                      <span style={{fontSize:'14px',color:'rgba(52,211,153,0.7)',fontWeight:'600'}}>kg</span>
-                                    </div>
-                                    <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>bədən çəkisi</div>
-                                  </div>
+                              /* ── Has data: minimal weight display ── */
+                              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'4px'}}>
+                                <div style={{display:'flex',alignItems:'baseline',gap:'4px'}}>
+                                  <span style={{fontSize:'48px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-1px'}}>
+                                    {latestBodyWeight}
+                                  </span>
+                                  <span style={{fontSize:'18px',color:'rgba(52,211,153,0.7)',fontWeight:'600'}}>kg</span>
                                 </div>
-                                <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
-                                  {wBars.map((h, i) => (
-                                    <rect key={i} x={i * 26 + 2} y={150 - h} width="20" height={Math.max(h, 2)} rx="4"
-                                      fill="#34d399" opacity={i === wBars.length - 1 ? 1 : 0.45} />
-                                  ))}
-                                </svg>
-                                <div style={{...timeRow,color:'rgba(52,211,153,0.35)'}}>
-                                  <span>+ tap to add</span>
-                                </div>
-                              </>
+                                <span style={{fontSize:'11px',color:'rgba(255,255,255,0.25)',letterSpacing:'0.05em'}}>bədən çəkisi</span>
+                              </div>
                             )}
                           </div>
                         );
