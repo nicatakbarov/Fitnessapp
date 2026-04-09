@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
@@ -35,6 +35,11 @@ export default function OnboardingPage() {
   const [animating, setAnimating] = useState(false);
   const [visible, setVisible] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) navigate('/dashboard', { replace: true });
+  }, [navigate]);
 
   const finish = () => {
     localStorage.setItem('onboarding_done', 'true');
