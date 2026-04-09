@@ -4,10 +4,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Dumbbell, LogOut, User, Flame, CheckCircle2, Calendar, Trophy,
   ArrowRight, Clock, Zap, ChevronRight, Utensils, BarChart3,
-  FileText, Circle, Minus, X, Heart, Footprints, Activity
+  FileText, Circle, Minus, X, Heart, Footprints, Activity, Moon
 } from 'lucide-react';
 import {
-  requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate
+  requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate, getSleepLast7Days
 } from '../lib/healthkit';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
@@ -23,7 +23,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [customPlanData, setCustomPlanData] = useState(null);
   const [showProgramSelector, setShowProgramSelector] = useState(false);
-  const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null });
+  const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -57,13 +57,15 @@ const DashboardPage = () => {
     console.log('[Dashboard] fetchHealthData started');
     const permResult = await requestHealthPermissions();
     console.log('[Dashboard] permResult:', permResult);
-    const [steps, calories, heartRate] = await Promise.all([
+    const [steps, calories, heartRate, sleepData] = await Promise.all([
       getTodaySteps(),
       getTodayCalories(),
       getLatestHeartRate(),
+      getSleepLast7Days(),
     ]);
-    console.log('[Dashboard] health results:', { steps, calories, heartRate });
-    setHealthData({ steps, calories, heartRate });
+    const lastNight = sleepData?.length ? sleepData[sleepData.length - 1].hours : null;
+    console.log('[Dashboard] health results:', { steps, calories, heartRate, sleepHours: lastNight });
+    setHealthData({ steps, calories, heartRate, sleepHours: lastNight });
   };
 
   const fetchData = async (userId) => {
@@ -474,107 +476,6 @@ const DashboardPage = () => {
             />
           </section>
 
-          {/* Today's Health */}
-          {(healthData.steps !== null || healthData.calories !== null || healthData.heartRate !== null) && (() => {
-            const dayBars   = [2,3,1,4,2,3,5,2,1,3,2,4,3,12,18,22,20,15,8,6,4,3,2,5,3,4,2,3,1,2];
-            const sleepBars = [0,0,0,0,6,16,20,14,18,16,20,18,16,22,18,16,20,14,12,8,4,0,0,0,0,0,0,0,0,0];
-            const W = {borderRadius:'20px',padding:'14px',display:'flex',flexDirection:'column',aspectRatio:'1',overflow:'hidden'};
-            const iconBox = (bg) => ({background:bg,borderRadius:'50%',width:'34px',height:'34px',display:'flex',alignItems:'center',justifyContent:'center'});
-            const timeRow = {display:'flex',justifyContent:'space-between',fontSize:'9px',color:'rgba(255,255,255,0.25)'};
-            return (
-              <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest">Today's Health</h2>
-                  <span className="text-xs text-zinc-600">from Apple Health</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-
-                  {/* Widget 1: Steps — green */}
-                  <div style={{...W, background:'#162b1a'}}>
-                    <div style={{marginBottom:'6px'}}>
-                      <div style={iconBox('#1f3d25')}><Footprints size={16} color="#4ade80" /></div>
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:'28px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
-                        {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
-                      </div>
-                      <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginTop:'3px'}}>of 10 000 steps</div>
-                    </div>
-                    <svg viewBox="0 0 183 28" style={{width:'100%',height:'28px',marginBottom:'3px'}} aria-hidden="true">
-                      {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={28-h} width="4" height={Math.max(h,1)} rx="1" fill="#4ade80" opacity={h>7?1:0.28} />)}
-                    </svg>
-                    <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
-                  </div>
-
-                  {/* Widget 2: Heart Rate — purple */}
-                  <div style={{...W, background:'#1a0e3a'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'6px'}}>
-                      <div style={iconBox('#2d1a5e')}><Heart size={16} color="#f472b6" /></div>
-                      <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:'14px',fontWeight:'700',color:'#f472b6',lineHeight:1}}>
-                          {healthData.heartRate !== null ? `${healthData.heartRate} BPM` : '— BPM'}
-                        </div>
-                        <div style={{fontSize:'9px',color:'#f472b6',opacity:0.6,marginTop:'2px'}}>♥ Avg</div>
-                      </div>
-                    </div>
-                    <div style={{flex:1}} />
-                    <svg viewBox="0 0 183 28" style={{width:'100%',height:'28px',marginBottom:'3px'}} aria-hidden="true">
-                      {sleepBars.map((h,i) => h > 0 ? <rect key={i} x={i*6+1} y={28-h} width="4" height={h} rx="1" fill="#38bdf8" opacity="0.75" /> : null)}
-                    </svg>
-                    <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
-                  </div>
-
-                  {/* Widget 3: Calories — dark red */}
-                  <div style={{...W, background:'#2d1010'}}>
-                    <div style={{marginBottom:'6px'}}>
-                      <div style={iconBox('#4a1515')}><Flame size={16} color="#f97316" /></div>
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{display:'flex',alignItems:'baseline',gap:'3px'}}>
-                        <span style={{fontSize:'28px',fontWeight:'800',color:'#ff6b35',lineHeight:1,letterSpacing:'-0.5px'}}>
-                          {healthData.calories !== null ? healthData.calories : '—'}
-                        </span>
-                        <span style={{fontSize:'13px',color:'rgba(249,115,22,0.6)',fontWeight:'600'}}>kcal</span>
-                      </div>
-                      <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginTop:'3px'}}>of 600 kcal burn</div>
-                    </div>
-                    <svg viewBox="0 0 183 28" style={{width:'100%',height:'28px',marginBottom:'3px'}} aria-hidden="true">
-                      {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={28-h} width="4" height={Math.max(h,1)} rx="1" fill="#f97316" opacity={h>7?1:0.28} />)}
-                    </svg>
-                    <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
-                  </div>
-
-                  {/* Widget 4: Summary — dark charcoal */}
-                  <div style={{...W, background:'#1a1a28'}}>
-                    <div style={{marginBottom:'8px'}}>
-                      <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
-                        <circle cx="20" cy="20" r="17" stroke="#ff6b35" strokeWidth="3.5" fill="none" strokeDasharray="75 32" strokeLinecap="round" transform="rotate(-90 20 20)" />
-                        <circle cx="20" cy="20" r="12" stroke="#4ade80" strokeWidth="3.5" fill="none" strokeDasharray="55 20" strokeLinecap="round" transform="rotate(-90 20 20)" />
-                        <circle cx="20" cy="20" r="7"  stroke="#38bdf8" strokeWidth="3.5" fill="none" strokeDasharray="32 12" strokeLinecap="round" transform="rotate(-90 20 20)" />
-                      </svg>
-                    </div>
-                    <div style={{flex:1,display:'flex',flexDirection:'column',gap:'6px',justifyContent:'center'}}>
-                      <div>
-                        <span style={{fontSize:'16px',fontWeight:'700',color:'#f97316'}}>{healthData.calories !== null ? healthData.calories : '—'}</span>
-                        <span style={{fontSize:'10px',color:'rgba(249,115,22,0.6)',marginLeft:'3px',fontWeight:'600'}}>KCAL</span>
-                      </div>
-                      <div>
-                        <span style={{fontSize:'16px',fontWeight:'700',color:'#4ade80'}}>{healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}</span>
-                        <span style={{fontSize:'10px',color:'rgba(74,222,128,0.6)',marginLeft:'3px',fontWeight:'600'}}>STEPS</span>
-                      </div>
-                      <div>
-                        <span style={{fontSize:'16px',fontWeight:'700',color:'#f472b6'}}>{healthData.heartRate !== null ? healthData.heartRate : '—'}</span>
-                        <span style={{fontSize:'10px',color:'rgba(244,114,182,0.6)',marginLeft:'3px',fontWeight:'600'}}>BPM</span>
-                      </div>
-                    </div>
-                    <div style={{fontSize:'10px',color:'rgba(255,255,255,0.25)'}}>Today's activity</div>
-                  </div>
-
-                </div>
-              </section>
-            );
-          })()}
-
           {/* Today's Workout */}
           <section
             className="bg-zinc-900/80 border-l-4 border-green-500 rounded-2xl p-6 md:p-8"
@@ -751,27 +652,6 @@ const DashboardPage = () => {
             </div>
           </section>
 
-          {/* Quick Actions */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="quick-actions">
-            <QuickActionCard
-              icon={<FileText className="w-6 h-6" />}
-              label="View Full Program"
-              onClick={() => navigate(programLink)}
-              testId="action-program"
-            />
-            <QuickActionCard
-              icon={<Utensils className="w-6 h-6" />}
-              label="Nutrition Tips"
-              onClick={() => navigate('/nutrition')}
-              testId="action-nutrition"
-            />
-            <QuickActionCard
-              icon={<BarChart3 className="w-6 h-6" />}
-              label="My Progress"
-              onClick={() => navigate('/progress')}
-              testId="action-progress"
-            />
-          </section>
         </div>
       </main>
       <BottomNav />

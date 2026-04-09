@@ -9,7 +9,7 @@ import DashboardPage from "./pages/DashboardPage";
 import MyProgramsPage from "./pages/MyProgramsPage";
 import ProgramDetailPage from "./pages/ProgramDetailPage";
 import DayWorkoutPage from "./pages/DayWorkoutPage";
-import NutritionPage from "./pages/NutritionPage";
+import AIChatPage from "./pages/AIChatPage";
 import ProgressPage from "./pages/ProgressPage";
 import BrowseProgramsPage from "./pages/BrowseProgramsPage";
 import CreateCustomPlanPage from "./pages/CreateCustomPlanPage";
@@ -39,7 +39,7 @@ function App() {
             <Route path="/my-programs" element={<MyProgramsPage />} />
             <Route path="/program/:id" element={<ProgramDetailPage />} />
             <Route path="/program/:id/day/:dayId" element={<DayWorkoutPage />} />
-            <Route path="/nutrition" element={<NutritionPage />} />
+            <Route path="/nutrition" element={<AIChatPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/browse" element={<BrowseProgramsPage />} />
             <Route path="/create-plan" element={<CreateCustomPlanPage />} />

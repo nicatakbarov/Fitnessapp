@@ -1,10 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Dumbbell, Utensils, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Dumbbell, Bot, BarChart3 } from 'lucide-react';
 
 const tabs = [
   { label: 'Home',      icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Program',   icon: Dumbbell,         path: '/my-programs' },
-  { label: 'Nutrition', icon: Utensils,          path: '/nutrition' },
+  { label: 'AI Coach',  icon: Bot,              path: '/nutrition' },
   { label: 'Progress',  icon: BarChart3,         path: '/progress' },
 ];
 

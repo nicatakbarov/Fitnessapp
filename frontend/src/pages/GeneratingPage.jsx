@@ -3,10 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Dumbbell, CheckCircle2 } from 'lucide-react';
 
 const STEPS = [
-  'Analyzing your equipment...',
-  'Building your weekly schedule...',
+  'Analyzing your fitness goals...',
+  'Checking available equipment...',
   'Selecting exercises for your level...',
+  'Building your weekly schedule...',
   'Generating 4-week progression...',
+  'Calculating rest & recovery days...',
+  'Adding warm-up & cooldown sets...',
   'Your program is ready!',
 ];
 
@@ -32,7 +35,7 @@ const GeneratingPage = () => {
         }
         return prev + 1;
       });
-    }, 700);
+    }, 1500);
 
     return () => clearInterval(interval);
   }, [navigate]);

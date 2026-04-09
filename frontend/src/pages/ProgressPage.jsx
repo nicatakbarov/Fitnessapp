@@ -1,10 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import BottomNav from '../components/BottomNav';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Moon, Watch, Scale, Footprints, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { getSleepLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions } from '../lib/healthkit';
+import { getSleepLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
 
 const ProgressPage = () => {
   const navigate = useNavigate();
@@ -14,6 +14,8 @@ const ProgressPage = () => {
   const [sleepData, setSleepData] = useState([]);
   const [weightData, setWeightData] = useState([]);
   const [watchWorkouts, setWatchWorkouts] = useState([]);
+  const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
+  const isFetching = useRef(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -39,15 +41,31 @@ const ProgressPage = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchHealthData = async () => {
-    await requestHealthPermissions();
-    const [sleep, weight, workouts] = await Promise.all([
-      getSleepLast7Days(),
-      getWeightHistory(),
-      getAppleWatchWorkouts(),
-    ]);
-    setSleepData(sleep);
-    setWeightData(weight);
-    setWatchWorkouts(workouts);
+    if (isFetching.current) return;
+    isFetching.current = true;
+    try {
+      await requestHealthPermissions();
+      const [sleep, weight, workouts, steps, calories, heartRate] = await Promise.all([
+        getSleepLast7Days(),
+        getWeightHistory(),
+        getAppleWatchWorkouts(),
+        getTodaySteps(),
+        getTodayCalories(),
+        getLatestHeartRate(),
+      ]);
+      setSleepData(sleep);
+      setWeightData(weight);
+      setWatchWorkouts(workouts);
+      const lastNight = sleep?.length ? sleep[sleep.length - 1].hours : null;
+      setHealthData({ steps, calories, heartRate, sleepHours: lastNight });
+      const noData = (steps === 0 || steps === null) && (calories === 0 || calories === null) && heartRate === null;
+      if (noData) {
+        setTimeout(() => { isFetching.current = false; fetchHealthData(); }, 1500);
+        return;
+      }
+    } finally {
+      isFetching.current = false;
+    }
   };
 
   const fetchProgress = async (userId) => {
@@ -273,6 +291,96 @@ const ProgressPage = () => {
             </h1>
             <p className="text-zinc-400">Track your fitness journey across all programs.</p>
           </div>
+
+          {/* Today's Health Widgets — always shown, loads independently */}
+          {(() => {
+                const zeroBars  = Array(30).fill(2);
+                const dayBars   = (healthData.steps || 0) > 0 ? [6,10,4,12,6,10,17,6,4,10,8,14,12,62,108,145,128,95,46,29,17,10,6,21,10,14,8,10,4,8] : zeroBars;
+                const sleepBars = (healthData.sleepHours || 0) > 0 ? [0,0,0,0,29,91,132,87,115,103,132,115,103,140,115,103,132,87,70,41,21,0,0,0,0,0,0,0,0,0] : zeroBars;
+                const W = {borderRadius:'20px',padding:'14px',display:'flex',flexDirection:'column',aspectRatio:'1',overflow:'hidden'};
+                const iconBox = (bg) => ({background:bg,borderRadius:'50%',width:'26px',height:'26px',display:'flex',alignItems:'center',justifyContent:'center'});
+                const timeRow = {display:'flex',justifyContent:'space-between',fontSize:'10px',color:'rgba(255,255,255,0.25)'};
+                return (
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="font-heading text-sm font-bold text-zinc-400 uppercase tracking-widest">Today's Health</h2>
+                      <span className="text-xs text-zinc-600">from Apple Health</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Widget 1: Steps */}
+                      <div style={{...W, background:'#162b1a'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
+                          <div style={iconBox('#1f3d25')}><Footprints size={12} color="#4ade80" /></div>
+                          <div style={{textAlign:'right'}}>
+                            <div style={{fontSize:'32px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
+                              {healthData.steps !== null ? healthData.steps.toLocaleString() : '—'}
+                            </div>
+                            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 10 000 steps</div>
+                          </div>
+                        </div>
+                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
+                          {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#4ade80" opacity={h>20?1:0.3} />)}
+                        </svg>
+                        <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                      </div>
+                      {/* Widget 2: Heart Rate */}
+                      <div style={{...W, background:'#1a0e3a'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
+                          <div style={iconBox('#2d1a5e')}><Heart size={12} color="#f472b6" /></div>
+                          <div style={{textAlign:'right'}}>
+                            <div style={{fontSize:'32px',fontWeight:'800',color:'#f472b6',lineHeight:1}}>
+                              {healthData.heartRate !== null ? `${healthData.heartRate}` : '—'}
+                            </div>
+                            <div style={{fontSize:'13px',color:'#f472b6',opacity:0.6,marginTop:'2px'}}>BPM avg</div>
+                          </div>
+                        </div>
+                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
+                          {(healthData.heartRate ? [0,0,0,0,29,91,132,87,115,103,132,115,103,140,115,103,132,87,70,41,21,0,0,0,0,0,0,0,0,0] : zeroBars).map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#38bdf8" opacity={h>20?0.85:0.2} />)}
+                        </svg>
+                        <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                      </div>
+                      {/* Widget 3: Calories */}
+                      <div style={{...W, background:'#2d1010'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
+                          <div style={iconBox('#4a1515')}><Flame size={12} color="#f97316" /></div>
+                          <div style={{textAlign:'right'}}>
+                            <div style={{display:'flex',alignItems:'baseline',gap:'3px',justifyContent:'flex-end'}}>
+                              <span style={{fontSize:'32px',fontWeight:'800',color:'#ff6b35',lineHeight:1,letterSpacing:'-0.5px'}}>
+                                {healthData.calories !== null ? healthData.calories : '—'}
+                              </span>
+                              <span style={{fontSize:'14px',color:'rgba(249,115,22,0.6)',fontWeight:'600'}}>kcal</span>
+                            </div>
+                            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 600 kcal burn</div>
+                          </div>
+                        </div>
+                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
+                          {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#f97316" opacity={h>20?1:0.3} />)}
+                        </svg>
+                        <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                      </div>
+                      {/* Widget 4: Sleep */}
+                      <div style={{...W, background:'#0e1a2e'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
+                          <div style={iconBox('#152540')}><Moon size={12} color="#818cf8" /></div>
+                          <div style={{textAlign:'right'}}>
+                            <div style={{display:'flex',alignItems:'baseline',gap:'3px',justifyContent:'flex-end'}}>
+                              <span style={{fontSize:'32px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
+                                {healthData.sleepHours !== null ? healthData.sleepHours : '—'}
+                              </span>
+                              <span style={{fontSize:'14px',color:'rgba(129,140,248,0.7)',fontWeight:'600'}}>saat</span>
+                            </div>
+                            <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>dünən gecə</div>
+                          </div>
+                        </div>
+                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
+                          {sleepBars.map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#818cf8" opacity={h>20?0.85:0.2} />)}
+                        </svg>
+                        <div style={timeRow}><span>20:00</span><span>0:00</span><span>8:00</span></div>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
 
           {loading ? (
             <div className="text-center py-12">
