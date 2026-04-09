@@ -616,10 +616,10 @@ const ProgressPage = () => {
                     const DAY_GOAL = 10000;
                     return (
                       <>
-                        <div className="flex items-end justify-between gap-2 h-28 mb-3">
+                        <div className="flex items-end justify-between gap-2 mb-3">
                           {weeklySteps.map((d, i) => {
                             const isToday = d.date === todayStr;
-                            const pct = Math.max(4, (d.steps / maxSteps) * 100);
+                            const barH = Math.max(4, (d.steps / maxSteps) * 80);
                             const goalPct = Math.min(100, (d.steps / DAY_GOAL) * 100);
                             return (
                               <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -628,12 +628,12 @@ const ProgressPage = () => {
                                     {d.steps >= 1000 ? `${(d.steps / 1000).toFixed(1)}k` : d.steps}
                                   </span>
                                 )}
-                                <div className="w-full flex-1 flex items-end">
+                                <div className="w-full flex items-end" style={{ height: '80px' }}>
                                   <div
                                     className={`w-full rounded-t-md transition-all ${
                                       isToday ? 'bg-green-400' : goalPct >= 100 ? 'bg-green-600' : 'bg-green-800/60'
                                     }`}
-                                    style={{ height: `${pct}%` }}
+                                    style={{ height: `${barH}px` }}
                                   />
                                 </div>
                               </div>
