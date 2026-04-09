@@ -1,10 +1,20 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import BottomNav from '../components/BottomNav';
 import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Moon, Watch, Scale, Footprints, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
 import { getSleepLast7Days, getStepsLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
+import { Capacitor } from '@capacitor/core';
+
+// Light haptic tap — only fires on native iOS, silently skipped on web
+const hapticTick = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
+    await Haptics.impact({ style: ImpactStyle.Light });
+  } catch (_) {}
+};
 
 const ProgressPage = () => {
   const navigate = useNavigate();
@@ -18,7 +28,8 @@ const ProgressPage = () => {
   const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [rulerWeight, setRulerWeight] = useState(70);
-  const rulerDragRef = useRef({ active: false, startX: 0, startWeight: 70 });
+  const rulerDragRef = useRef({ active: false, startX: 0, startWeight: 70, lastX: 0, velocity: 0, lastTime: 0 });
+  const momentumRef = useRef(null);
   const isFetching = useRef(false);
 
   useEffect(() => {
@@ -115,18 +126,51 @@ const ProgressPage = () => {
     ? bodyWeightHistory[bodyWeightHistory.length - 1].weight
     : null;
 
-  const onRulerStart = (clientX) => {
-    rulerDragRef.current = { active: true, startX: clientX, startWeight: rulerWeight };
-  };
-  const onRulerMove = (clientX) => {
-    if (!rulerDragRef.current.active) return;
-    const dx = clientX - rulerDragRef.current.startX;
-    const newW = Math.max(30, Math.min(200,
-      Math.round((rulerDragRef.current.startWeight - dx / 10) * 2) / 2
-    ));
-    setRulerWeight(newW);
-  };
-  const onRulerEnd = () => { rulerDragRef.current.active = false; };
+  const onRulerStart = useCallback((clientX) => {
+    if (momentumRef.current) cancelAnimationFrame(momentumRef.current);
+    const now = performance.now();
+    rulerDragRef.current = { active: true, startX: clientX, startWeight: rulerWeight, lastX: clientX, velocity: 0, lastTime: now };
+  }, [rulerWeight]);
+
+  const onRulerMove = useCallback((clientX) => {
+    const d = rulerDragRef.current;
+    if (!d.active) return;
+    const now = performance.now();
+    const dt = now - d.lastTime;
+    if (dt > 0) d.velocity = (clientX - d.lastX) / dt; // px/ms
+    d.lastX = clientX;
+    d.lastTime = now;
+    const dx = clientX - d.startX;
+    const PX_PER_KG = 10;
+    const raw = d.startWeight - dx / PX_PER_KG;
+    const newW = Math.max(30, Math.min(200, Math.round(raw * 2) / 2));
+    setRulerWeight(prev => {
+      if (prev !== newW) hapticTick();
+      return newW;
+    });
+  }, []);
+
+  const onRulerEnd = useCallback(() => {
+    const d = rulerDragRef.current;
+    d.active = false;
+    // Momentum scroll
+    let vel = d.velocity; // px/ms, negative = moving left = weight up
+    const PX_PER_KG = 10;
+    const decay = 0.92;
+    const step = () => {
+      vel *= decay;
+      if (Math.abs(vel) < 0.02) return;
+      rulerDragRef.current.startWeight -= vel * 16 / PX_PER_KG;
+      rulerDragRef.current.startX = rulerDragRef.current.lastX;
+      const newW = Math.max(30, Math.min(200, Math.round(rulerDragRef.current.startWeight * 2) / 2));
+      setRulerWeight(prev => {
+        if (prev !== newW) hapticTick();
+        return newW;
+      });
+      momentumRef.current = requestAnimationFrame(step);
+    };
+    momentumRef.current = requestAnimationFrame(step);
+  }, []);
 
   const addBodyWeight = () => {
     const val = rulerWeight;
