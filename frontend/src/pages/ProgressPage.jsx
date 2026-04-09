@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Moon, Watch, Scale, Footprints, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { getSleepLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
+import { getSleepLast7Days, getStepsLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
 
 const ProgressPage = () => {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ const ProgressPage = () => {
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sleepData, setSleepData] = useState([]);
+  const [weeklySteps, setWeeklySteps] = useState([]);
   const [weightData, setWeightData] = useState([]);
   const [watchWorkouts, setWatchWorkouts] = useState([]);
   const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
@@ -47,8 +48,9 @@ const ProgressPage = () => {
     isFetching.current = true;
     try {
       await requestHealthPermissions();
-      const [sleep, weight, workouts, steps, calories, heartRate] = await Promise.all([
+      const [sleep, stepsWeekly, weight, workouts, steps, calories, heartRate] = await Promise.all([
         getSleepLast7Days(),
+        getStepsLast7Days(),
         getWeightHistory(),
         getAppleWatchWorkouts(),
         getTodaySteps(),
@@ -56,6 +58,7 @@ const ProgressPage = () => {
         getLatestHeartRate(),
       ]);
       setSleepData(sleep);
+      setWeeklySteps(stepsWeekly);
       setWeightData(weight);
       setWatchWorkouts(workouts);
       const lastNight = sleep?.length ? sleep[sleep.length - 1].hours : null;
@@ -597,47 +600,74 @@ const ProgressPage = () => {
                 )}
               </section>
 
-              {/* Sleep Analysis */}
+              {/* Weekly Steps */}
               <section>
-                  <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
-                    <Moon className="w-5 h-5 text-purple-400" /> Yuxu Analizi
-                  </h2>
-                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
-                  {sleepData.length === 0 ? (
-                    <p className="text-zinc-500 text-sm text-center py-4">Health app-də yuxu məlumatı tapılmadı. Apple Watch ilə yuxu izləməni aktiv et.</p>
-                  ) : (
-                    <>
-                    <div className="flex items-end justify-between gap-2 h-24 mb-3">
-                      {sleepData.map((d, i) => {
-                        const maxH = Math.max(...sleepData.map(s => s.hours), 1);
-                        const pct = Math.max(10, (d.hours / maxH) * 100);
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <span className="text-xs text-zinc-500">{d.hours}h</span>
-                            <div className="w-full rounded-t-md bg-purple-500/70" style={{ height: `${pct}%` }} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between">
-                      {sleepData.map((d, i) => (
-                        <div key={i} className="flex-1 text-center">
-                          <span className="text-xs text-zinc-600">
-                            {new Date(d.date).toLocaleDateString('az', { weekday: 'short' })}
-                          </span>
+                <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
+                  <Footprints className="w-5 h-5 text-green-400" /> Həftəlik Addımlar
+                </h2>
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
+                  {weeklySteps.length === 0 ? (
+                    <p className="text-zinc-500 text-sm text-center py-4">Apple Health-dən addım məlumatı tapılmadı.</p>
+                  ) : (() => {
+                    const maxSteps = Math.max(...weeklySteps.map(d => d.steps), 1);
+                    const totalSteps = weeklySteps.reduce((s, d) => s + d.steps, 0);
+                    const avgSteps = Math.round(totalSteps / weeklySteps.length);
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const DAY_GOAL = 10000;
+                    return (
+                      <>
+                        <div className="flex items-end justify-between gap-2 h-28 mb-3">
+                          {weeklySteps.map((d, i) => {
+                            const isToday = d.date === todayStr;
+                            const pct = Math.max(4, (d.steps / maxSteps) * 100);
+                            const goalPct = Math.min(100, (d.steps / DAY_GOAL) * 100);
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                {d.steps > 0 && (
+                                  <span className="text-[10px] text-zinc-500">
+                                    {d.steps >= 1000 ? `${(d.steps / 1000).toFixed(1)}k` : d.steps}
+                                  </span>
+                                )}
+                                <div className="w-full flex-1 flex items-end">
+                                  <div
+                                    className={`w-full rounded-t-md transition-all ${
+                                      isToday ? 'bg-green-400' : goalPct >= 100 ? 'bg-green-600' : 'bg-green-800/60'
+                                    }`}
+                                    style={{ height: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
-                      <span className="text-sm text-zinc-400">Ortalama</span>
-                      <span className="text-sm font-bold text-white">
-                        {(sleepData.reduce((s, d) => s + d.hours, 0) / sleepData.length).toFixed(1)} saat
-                      </span>
-                    </div>
-                    </>
-                  )}
-                  </div>
-                </section>
+                        <div className="flex justify-between mb-4">
+                          {weeklySteps.map((d, i) => {
+                            const isToday = d.date === todayStr;
+                            const dayName = new Date(d.date).toLocaleDateString('az', { weekday: 'short' });
+                            return (
+                              <div key={i} className="flex-1 text-center">
+                                <span className={`text-xs font-medium ${isToday ? 'text-green-400' : 'text-zinc-600'}`}>
+                                  {dayName}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="pt-3 border-t border-zinc-800 grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-zinc-500 mb-0.5">Həftəlik cəm</p>
+                            <p className="text-lg font-bold text-white">{totalSteps.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-zinc-500 mb-0.5">Günlük ortalama</p>
+                            <p className="text-lg font-bold text-white">{avgSteps.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </section>
 
               {/* Weight Trend */}
               <section>

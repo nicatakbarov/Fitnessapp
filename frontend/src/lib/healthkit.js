@@ -115,6 +115,33 @@ export const getWorkoutCaloriesAndHR = async (workoutStart) => {
   }
 };
 
+export const getStepsLast7Days = async () => {
+  await initPlugin();
+  const plugin = getPlugin();
+  if (!plugin) return [];
+  try {
+    const end = new Date();
+    const start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+    const res = await plugin.queryHKitSampleType({
+      sampleName: 'stepCount',
+      startDate: start.toISOString(), endDate: end.toISOString(), limit: 0,
+    });
+    const days = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      days[d.toISOString().split('T')[0]] = 0;
+    }
+    for (const r of (res.resultData || [])) {
+      const key = new Date(r.startDate).toISOString().split('T')[0];
+      if (key in days) days[key] += r.value || 0;
+    }
+    return Object.entries(days).map(([date, steps]) => ({ date, steps: Math.round(steps) }));
+  } catch (e) {
+    console.error('[HealthKit] weekly steps error:', e.message || String(e));
+    return [];
+  }
+};
+
 export const getSleepLast7Days = async () => {
   await initPlugin();
   const plugin = getPlugin();
