@@ -804,39 +804,59 @@ const ProgressPage = () => {
                     <Scale className="w-5 h-5 text-cyan-400" /> Çəki Trendi
                   </h2>
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
-                  {weightData.length === 0 ? (
-                    <p className="text-zinc-500 text-sm text-center py-4">Health app-də çəki məlumatı tapılmadı. Health app-dən əl ilə əlavə edə bilərsən.</p>
+                  {bodyWeightHistory.length === 0 ? (
+                    <p className="text-zinc-500 text-sm text-center py-4">Hələ çəki məlumatı yoxdur. Yuxarıdakı widget ilə əlavə et.</p>
                   ) : (
                     <>{(() => {
-                      const last12 = weightData.slice(-12);
+                      const last12 = bodyWeightHistory.slice(-12);
                       const minW = Math.min(...last12.map(d => d.weight));
                       const maxW = Math.max(...last12.map(d => d.weight));
-                      const range = maxW - minW || 1;
+                      const range = maxW - minW || 0.1;
                       const latest = last12[last12.length - 1];
                       const first = last12[0];
                       const diff = (latest.weight - first.weight).toFixed(1);
+                      const BAR_MAX_H = 60;
                       return (
                         <>
-                          <div className="flex items-end gap-1 h-20 mb-3">
+                          <div className="flex items-end gap-1 mb-3">
                             {last12.map((d, i) => {
-                              const pct = ((d.weight - minW) / range) * 70 + 15;
+                              const barH = Math.max(6, ((d.weight - minW) / range) * (BAR_MAX_H - 6) + 6);
+                              const isLatest = i === last12.length - 1;
                               return (
-                                <div key={i} className="flex-1 flex flex-col items-center justify-end">
-                                  <div
-                                    className="w-2 rounded-full bg-cyan-400"
-                                    style={{ height: `${pct}%` }}
-                                  />
+                                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                  {isLatest && (
+                                    <span className="text-[9px] text-cyan-400 font-bold">{d.weight}</span>
+                                  )}
+                                  <div className="w-full flex items-end" style={{ height: `${BAR_MAX_H}px` }}>
+                                    <div
+                                      className={`w-full rounded-t-sm ${isLatest ? 'bg-cyan-400' : 'bg-cyan-800/60'}`}
+                                      style={{ height: `${barH}px` }}
+                                    />
+                                  </div>
+                                  {isLatest && (
+                                    <span className="text-[9px] text-zinc-600">
+                                      {new Date(d.date).toLocaleDateString('az', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
                             <span className="text-2xl font-bold text-white">{latest.weight} kg</span>
-                            <span className={`text-sm font-medium ${+diff < 0 ? 'text-green-400' : +diff > 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                            <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+                              +diff < 0 ? 'bg-green-500/15 text-green-400'
+                              : +diff > 0 ? 'bg-red-500/15 text-red-400'
+                              : 'bg-zinc-800 text-zinc-400'
+                            }`}>
                               {+diff > 0 ? '+' : ''}{diff} kg
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-500 mt-1">Apple Health-dən avtomatik sinxron</p>
+                          <p className="text-xs text-zinc-600 mt-1">
+                            {last12.length} ölçüm · son {last12.length > 1
+                              ? Math.round((new Date(latest.date) - new Date(first.date)) / 86400000) + ' gün'
+                              : 'ölçüm'}
+                          </p>
                         </>
                       );
                     })()}</>
