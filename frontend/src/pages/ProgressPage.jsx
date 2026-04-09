@@ -17,7 +17,8 @@ const ProgressPage = () => {
   const [watchWorkouts, setWatchWorkouts] = useState([]);
   const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
   const [showWeightInput, setShowWeightInput] = useState(false);
-  const [weightInput, setWeightInput] = useState('');
+  const [rulerWeight, setRulerWeight] = useState(70);
+  const rulerDragRef = useRef({ active: false, startX: 0, startWeight: 70 });
   const isFetching = useRef(false);
 
   useEffect(() => {
@@ -114,8 +115,21 @@ const ProgressPage = () => {
     ? bodyWeightHistory[bodyWeightHistory.length - 1].weight
     : null;
 
+  const onRulerStart = (clientX) => {
+    rulerDragRef.current = { active: true, startX: clientX, startWeight: rulerWeight };
+  };
+  const onRulerMove = (clientX) => {
+    if (!rulerDragRef.current.active) return;
+    const dx = clientX - rulerDragRef.current.startX;
+    const newW = Math.max(30, Math.min(200,
+      Math.round((rulerDragRef.current.startWeight - dx / 10) * 2) / 2
+    ));
+    setRulerWeight(newW);
+  };
+  const onRulerEnd = () => { rulerDragRef.current.active = false; };
+
   const addBodyWeight = () => {
-    const val = parseFloat(weightInput.replace(',', '.'));
+    const val = rulerWeight;
     if (!val || val < 20 || val > 300 || !user) return;
     const lsKey = `body_weights_${user.id}`;
     const existing = JSON.parse(localStorage.getItem(lsKey) || '[]');
@@ -123,9 +137,7 @@ const ProgressPage = () => {
     const filtered = existing.filter(e => e.date?.slice(0, 10) !== today);
     const updated = [...filtered, { date: new Date().toISOString(), weight: val }];
     localStorage.setItem(lsKey, JSON.stringify(updated));
-    setWeightInput('');
     setShowWeightInput(false);
-    // Force re-render by toggling weightData
     setWeightData(prev => [...prev]);
   };
 
@@ -402,32 +414,105 @@ const ProgressPage = () => {
                       {(() => {
                         return (
                           <div
-                            onClick={() => setShowWeightInput(v => !v)}
+                            onClick={() => {
+                              if (!showWeightInput) setRulerWeight(latestBodyWeight || 70);
+                              setShowWeightInput(v => !v);
+                            }}
                             style={{...W, background:'#0e2420', cursor:'pointer', justifyContent:'center', alignItems:'center'}}
                           >
                             {showWeightInput ? (
-                              /* ── Input mode ── */
-                              <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',width:'100%',gap:'10px'}}
+                              /* ── Ruler picker mode ── */
+                              <div style={{display:'flex',flexDirection:'column',alignItems:'center',
+                                width:'100%',height:'100%',justifyContent:'space-between',gap:'4px'}}
                                 onClick={e => e.stopPropagation()}>
-                                <div style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Çəkini daxil et (kg)</div>
-                                <input
-                                  autoFocus
-                                  type="number"
-                                  value={weightInput}
-                                  onChange={e => setWeightInput(e.target.value)}
-                                  onKeyDown={e => { if (e.key === 'Enter') addBodyWeight(); if (e.key === 'Escape') setShowWeightInput(false); }}
-                                  placeholder="70.5"
-                                  style={{
-                                    background:'rgba(255,255,255,0.08)',border:'1px solid rgba(52,211,153,0.4)',
-                                    borderRadius:'10px',padding:'8px 12px',color:'white',fontSize:'20px',
-                                    fontWeight:'700',width:'100%',textAlign:'center',outline:'none',
-                                  }}
-                                />
+
+                                {/* Weight value display */}
+                                <div style={{display:'flex',alignItems:'baseline',gap:'3px',marginTop:'4px'}}>
+                                  <span style={{fontSize:'38px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-1px'}}>
+                                    {rulerWeight}
+                                  </span>
+                                  <span style={{fontSize:'15px',color:'#34d399',fontWeight:'600'}}>kg</span>
+                                </div>
+
+                                {/* Ruler */}
+                                {(() => {
+                                  const PX_PER_KG = 10;
+                                  const ticks = [];
+                                  for (let w = 30; w <= 200; w += 0.5) {
+                                    const isMajor = Number.isInteger(w) && w % 5 === 0;
+                                    const isMinor = Number.isInteger(w) && w % 5 !== 0;
+                                    ticks.push({ w, isMajor, isMinor });
+                                  }
+                                  const rulerW = (200 - 30) * PX_PER_KG * 2; // total ruler width
+                                  const centerOffset = (rulerWeight - 30) * PX_PER_KG * 2;
+                                  return (
+                                    <div style={{position:'relative',width:'100%',height:'52px',
+                                      overflow:'hidden',cursor:'ew-resize',userSelect:'none'}}
+                                      onMouseDown={e => onRulerStart(e.clientX)}
+                                      onMouseMove={e => onRulerMove(e.clientX)}
+                                      onMouseUp={onRulerEnd}
+                                      onMouseLeave={onRulerEnd}
+                                      onTouchStart={e => { e.stopPropagation(); onRulerStart(e.touches[0].clientX); }}
+                                      onTouchMove={e => { e.stopPropagation(); onRulerMove(e.touches[0].clientX); }}
+                                      onTouchEnd={onRulerEnd}
+                                    >
+                                      {/* Sliding ruler strip */}
+                                      <div style={{
+                                        position:'absolute',
+                                        top:0,
+                                        left:`calc(50% - ${centerOffset}px)`,
+                                        width:`${rulerW}px`,
+                                        height:'44px',
+                                        display:'flex',
+                                        alignItems:'flex-end',
+                                        pointerEvents:'none',
+                                      }}>
+                                        {ticks.map((t, i) => (
+                                          <div key={i} style={{
+                                            position:'absolute',
+                                            left:`${(t.w - 30) * PX_PER_KG * 2}px`,
+                                            bottom:'8px',
+                                            width: t.isMajor ? '2px' : '1px',
+                                            height: t.isMajor ? '22px' : t.isMinor ? '14px' : '9px',
+                                            background: t.isMajor ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.2)',
+                                            transform:'translateX(-50%)',
+                                          }} />
+                                        ))}
+                                        {/* Major tick labels */}
+                                        {ticks.filter(t => t.isMajor).map((t, i) => (
+                                          <div key={i} style={{
+                                            position:'absolute',
+                                            left:`${(t.w - 30) * PX_PER_KG * 2}px`,
+                                            bottom:'0px',
+                                            transform:'translateX(-50%)',
+                                            fontSize:'8px',
+                                            color:'rgba(52,211,153,0.5)',
+                                            fontWeight:'600',
+                                            whiteSpace:'nowrap',
+                                          }}>
+                                            {t.w}
+                                          </div>
+                                        ))}
+                                      </div>
+                                      {/* Center indicator ▼ */}
+                                      <div style={{
+                                        position:'absolute',top:'0',left:'50%',
+                                        transform:'translateX(-50%)',
+                                        width:0,height:0,
+                                        borderLeft:'5px solid transparent',
+                                        borderRight:'5px solid transparent',
+                                        borderTop:'8px solid #34d399',
+                                      }} />
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Save button */}
                                 <button
                                   onClick={addBodyWeight}
                                   style={{background:'#34d399',border:'none',borderRadius:'10px',
-                                    padding:'8px 0',width:'100%',color:'#0a2e20',fontWeight:'700',
-                                    fontSize:'13px',cursor:'pointer'}}
+                                    padding:'6px 0',width:'100%',color:'#0a2e20',fontWeight:'700',
+                                    fontSize:'12px',cursor:'pointer',flexShrink:0}}
                                 >
                                   Saxla
                                 </button>
