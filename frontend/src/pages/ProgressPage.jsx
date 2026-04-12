@@ -139,7 +139,7 @@ const ProgressPage = () => {
     d.lastX = clientX;
     d.lastTime = now;
     const dx = clientX - d.startX;
-    const PX_PER_KG = 10;
+    const PX_PER_KG = 30;
     const raw = d.startWeight - dx / PX_PER_KG;
     const newW = Math.max(30, Math.min(200, Math.round(raw * 2) / 2));
     setRulerWeight(prev => {
@@ -157,8 +157,8 @@ const ProgressPage = () => {
     d.active = false;
     // Momentum scroll
     let vel = d.velocity; // px/ms, negative = moving left = weight up
-    const PX_PER_KG = 10;
-    const decay = 0.92;
+    const PX_PER_KG = 30;
+    const decay = 0.80;
     const step = () => {
       vel *= decay;
       if (Math.abs(vel) < 0.02) return;
