@@ -227,12 +227,33 @@ export default function AIChatPage() {
     }}>
       <DashboardNav user={user} onLogout={handleLogout} activePage="nutrition" />
 
+      {/* ── Header ── */}
+      <div style={{
+        padding: '24px 16px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+      }}>
+        <h1 style={{
+          fontSize: 28,
+          fontWeight: 700,
+          color: 'white',
+          margin: 0,
+          marginBottom: 4,
+          fontFamily: 'Oswald, sans-serif',
+          letterSpacing: '-0.5px',
+        }}>AI COACH</h1>
+        <p style={{
+          fontSize: 14,
+          color: '#a1a1aa',
+          margin: 0,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif',
+        }}>Suallarınızı sor və tövsiyyə al</p>
+      </div>
+
       {/* ── Message list ── */}
       <div style={{
         flex: 1,
         overflowY: 'auto',
         padding: '16px 14px',
-        paddingTop: '104px',
         paddingBottom: 160,
         display: 'flex',
         flexDirection: 'column',
