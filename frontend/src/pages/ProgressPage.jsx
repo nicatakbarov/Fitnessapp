@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import BottomNav from '../components/BottomNav';
 import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Moon, Watch, Scale, Footprints, Heart } from 'lucide-react';
+import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Watch, Scale, Footprints, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
-import { getSleepLast7Days, getStepsLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
+import { getStepsLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
 import { Capacitor } from '@capacitor/core';
 
 // Light haptic tap — only fires on native iOS, silently skipped on web
@@ -21,11 +21,10 @@ const ProgressPage = () => {
   const [user, setUser] = useState(null);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sleepData, setSleepData] = useState([]);
   const [weeklySteps, setWeeklySteps] = useState([]);
   const [weightData, setWeightData] = useState([]);
   const [watchWorkouts, setWatchWorkouts] = useState([]);
-  const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null, sleepHours: null });
+  const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null });
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [rulerWeight, setRulerWeight] = useState(70);
   const rulerDragRef = useRef({ active: false, startX: 0, startWeight: 70, lastX: 0, velocity: 0, lastTime: 0 });
@@ -60,8 +59,7 @@ const ProgressPage = () => {
     isFetching.current = true;
     try {
       await requestHealthPermissions();
-      const [sleep, stepsWeekly, weight, workouts, steps, calories, heartRate] = await Promise.all([
-        getSleepLast7Days(),
+      const [stepsWeekly, weight, workouts, steps, calories, heartRate] = await Promise.all([
         getStepsLast7Days(),
         getWeightHistory(),
         getAppleWatchWorkouts(),
@@ -69,12 +67,10 @@ const ProgressPage = () => {
         getTodayCalories(),
         getLatestHeartRate(),
       ]);
-      setSleepData(sleep);
       setWeeklySteps(stepsWeekly);
       setWeightData(weight);
       setWatchWorkouts(workouts);
-      const lastNight = sleep?.length ? sleep[sleep.length - 1].hours : null;
-      setHealthData({ steps, calories, heartRate, sleepHours: lastNight });
+      setHealthData({ steps, calories, heartRate });
       const noData = (steps === 0 || steps === null) && (calories === 0 || calories === null) && heartRate === null;
       if (noData) {
         setTimeout(() => { isFetching.current = false; fetchHealthData(); }, 1500);
@@ -348,24 +344,6 @@ const ProgressPage = () => {
 
   if (!user) return null;
 
-  // ── Mock fallbacks (shown only when real HealthKit data unavailable) ──
-  const today = new Date();
-  const mockWeeklySteps = weeklySteps.length > 0 ? weeklySteps : Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(today.getDate() - (6 - i));
-    return { date: d.toISOString().split('T')[0], steps: [6200, 9800, 11400, 7300, 10200, 8600, 7840][i] };
-  });
-  const mockWatchWorkouts = watchWorkouts.length > 0 ? watchWorkouts : [
-    { type: 'Running',              startDate: new Date(today.getTime() - 86400000).toISOString(), duration: 32, calories: 285 },
-    { type: 'Traditional Strength', startDate: new Date(today.getTime() - 86400000 * 3).toISOString(), duration: 48, calories: 196 },
-    { type: 'Cycling',             startDate: new Date(today.getTime() - 86400000 * 5).toISOString(), duration: 55, calories: 364 },
-  ];
-  const dispSteps     = healthData.steps     ?? 7840;
-  const dispHeartRate = healthData.heartRate ?? 73;
-  const dispCalories  = healthData.calories  ?? 318;
-  const isMockSteps   = healthData.steps     === null;
-  const isMockHR      = healthData.heartRate === null;
-  const isMockCal     = healthData.calories  === null;
-
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="progress-page">
       {/* Navbar */}
@@ -427,7 +405,7 @@ const ProgressPage = () => {
                           <div style={iconBox('#1f3d25')}><Footprints size={12} color="#4ade80" /></div>
                           <div style={{textAlign:'right'}}>
                             <div style={{fontSize:'32px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-0.5px'}}>
-                              {dispSteps.toLocaleString()}
+                              {(healthData.steps ?? 0).toLocaleString()}
                             </div>
                             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 10 000 steps</div>
                           </div>
@@ -443,7 +421,7 @@ const ProgressPage = () => {
                           <div style={iconBox('#2d1a5e')}><Heart size={12} color="#f472b6" /></div>
                           <div style={{textAlign:'right'}}>
                             <div style={{fontSize:'32px',fontWeight:'800',color:'#f472b6',lineHeight:1}}>
-                              {dispHeartRate}
+                              {healthData.heartRate ?? '—'}
                             </div>
                             <div style={{fontSize:'13px',color:'#f472b6',opacity:0.6,marginTop:'2px'}}>BPM avg</div>
                           </div>
@@ -460,7 +438,7 @@ const ProgressPage = () => {
                           <div style={{textAlign:'right'}}>
                             <div style={{display:'flex',alignItems:'baseline',gap:'3px',justifyContent:'flex-end'}}>
                               <span style={{fontSize:'32px',fontWeight:'800',color:'#ff6b35',lineHeight:1,letterSpacing:'-0.5px'}}>
-                                {dispCalories}
+                                {healthData.calories ?? 0}
                               </span>
                               <span style={{fontSize:'14px',color:'rgba(249,115,22,0.6)',fontWeight:'600'}}>kcal</span>
                             </div>
@@ -753,16 +731,18 @@ const ProgressPage = () => {
                   <Footprints className="w-5 h-5 text-green-400" /> Həftəlik Addımlar
                 </h2>
                 <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
-                  {(() => {
-                    const maxSteps = Math.max(...mockWeeklySteps.map(d => d.steps), 1);
-                    const totalSteps = mockWeeklySteps.reduce((s, d) => s + d.steps, 0);
-                    const avgSteps = Math.round(totalSteps / mockWeeklySteps.length);
+                  {weeklySteps.length === 0 ? (
+                    <p className="text-zinc-500 text-sm text-center py-4">Addım məlumatı yoxdur. Apple Health icazəsi lazımdır.</p>
+                  ) : (() => {
+                    const maxSteps = Math.max(...weeklySteps.map(d => d.steps), 1);
+                    const totalSteps = weeklySteps.reduce((s, d) => s + d.steps, 0);
+                    const avgSteps = Math.round(totalSteps / weeklySteps.length);
                     const todayStr = new Date().toISOString().split('T')[0];
                     const DAY_GOAL = 10000;
                     return (
                       <>
                         <div className="flex items-end justify-between gap-2 mb-3">
-                          {mockWeeklySteps.map((d, i) => {
+                          {weeklySteps.map((d, i) => {
                             const isToday = d.date === todayStr;
                             const barH = Math.max(4, (d.steps / maxSteps) * 80);
                             const goalPct = Math.min(100, (d.steps / DAY_GOAL) * 100);
@@ -786,7 +766,7 @@ const ProgressPage = () => {
                           })}
                         </div>
                         <div className="flex justify-between mb-4">
-                          {mockWeeklySteps.map((d, i) => {
+                          {weeklySteps.map((d, i) => {
                             const isToday = d.date === todayStr;
                             const dayName = new Date(d.date).toLocaleDateString('az', { weekday: 'short' });
                             return (
@@ -886,8 +866,14 @@ const ProgressPage = () => {
                   <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
                     <Watch className="w-5 h-5 text-zinc-300" /> Apple Watch Workoutları
                   </h2>
+                  {watchWorkouts.length === 0 ? (
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8 text-center">
+                      <Watch className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                      <p className="text-zinc-400 text-sm">Apple Watch workout məlumatı yoxdur.</p>
+                    </div>
+                  ) : (
                   <div className="space-y-3">
-                    {mockWatchWorkouts.slice(0, 5).map((w, i) => (
+                    {watchWorkouts.slice(0, 5).map((w, i) => (
                       <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-lg">⌚</div>
@@ -905,6 +891,7 @@ const ProgressPage = () => {
                       </div>
                     ))}
                   </div>
+                  )}
                 </section>
 
               {/* Workout History */}
