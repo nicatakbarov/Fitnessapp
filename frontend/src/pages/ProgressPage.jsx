@@ -884,8 +884,9 @@ const ProgressPage = () => {
                     {workoutHistory.map((item, index) => (
                       <div
                         key={index}
-                        className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center justify-between"
+                        className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-zinc-600 transition-colors"
                         data-testid={`history-item-${index}`}
+                        onClick={() => navigate(`/program/${item.program_id}/day/${item.day_id}`)}
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
