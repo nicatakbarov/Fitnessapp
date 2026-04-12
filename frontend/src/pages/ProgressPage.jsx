@@ -29,8 +29,6 @@ const ProgressPage = () => {
   const [rulerWeight, setRulerWeight] = useState(70);
   const rulerDragRef = useRef({ active: false, startX: 0, startWeight: 70, lastX: 0, velocity: 0, lastTime: 0 });
   const momentumRef = useRef(null);
-  const weightDirRef = useRef(0);
-  const [weightAnimKey, setWeightAnimKey] = useState(0);
   const isFetching = useRef(false);
 
   useEffect(() => {
@@ -143,11 +141,7 @@ const ProgressPage = () => {
     const raw = d.startWeight - dx / PX_PER_KG;
     const newW = Math.max(30, Math.min(200, Math.round(raw * 2) / 2));
     setRulerWeight(prev => {
-      if (prev !== newW) {
-        weightDirRef.current = newW > prev ? 1 : -1;
-        setWeightAnimKey(k => k + 1);
-        hapticTick();
-      }
+      if (prev !== newW) hapticTick();
       return newW;
     });
   }, []);
@@ -166,11 +160,7 @@ const ProgressPage = () => {
       rulerDragRef.current.startX = rulerDragRef.current.lastX;
       const newW = Math.max(30, Math.min(200, Math.round(rulerDragRef.current.startWeight * 2) / 2));
       setRulerWeight(prev => {
-        if (prev !== newW) {
-          weightDirRef.current = newW > prev ? 1 : -1;
-          setWeightAnimKey(k => k + 1);
-          hapticTick();
-        }
+        if (prev !== newW) hapticTick();
         return newW;
       });
       momentumRef.current = requestAnimationFrame(step);
@@ -477,17 +467,13 @@ const ProgressPage = () => {
                                 onClick={e => e.stopPropagation()}>
 
                                 {/* Weight value display */}
-                                <style>{`
-                                  @keyframes tickUp   { from { transform: translateY(30%); opacity:0.3 } to { transform: translateY(0); opacity:1 } }
-                                  @keyframes tickDown { from { transform: translateY(-30%); opacity:0.3 } to { transform: translateY(0); opacity:1 } }
-                                `}</style>
                                 <div style={{display:'flex',alignItems:'baseline',gap:'3px',marginTop:'4px'}}>
                                   <span
-                                    key={weightAnimKey}
                                     style={{
                                       fontSize:'38px',fontWeight:'800',color:'white',
                                       letterSpacing:'-1px',display:'inline-block',
-                                      animation:`${weightDirRef.current >= 0 ? 'tickUp' : 'tickDown'} 0.1s ease-out`,
+                                      transition:'opacity 0.06s ease-out',
+                                      opacity: 1,
                                     }}
                                   >
                                     {rulerWeight}
