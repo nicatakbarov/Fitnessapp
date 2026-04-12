@@ -72,7 +72,7 @@ const RegisterPage = () => {
         name: formData.name,
         email: formData.email,
       }));
-      navigate('/dashboard');
+      navigate('/browse');
     } catch (err) {
       setError(err?.message || 'Registration failed. Please try again.');
     } finally {
