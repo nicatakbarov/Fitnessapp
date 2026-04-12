@@ -457,20 +457,14 @@ const DashboardPage = () => {
               label="Program Complete"
               testId="stat-progress"
               chart={
-                <div className="flex items-end gap-0.5 h-10">
-                  {weeklyBarData.map((week, i) => (
-                    <div
-                      key={i}
-                      className={`flex-1 rounded-sm ${
-                        i < stats.currentWeek - 1
-                          ? 'bg-yellow-500'
-                          : i === stats.currentWeek - 1
-                            ? 'bg-yellow-500/60'
-                            : 'bg-zinc-700'
-                      }`}
-                      style={{ height: `${Math.max(15, (week.count / (stats.daysPerWeek || 1)) * 100)}%` }}
-                    />
-                  ))}
+                <div className="relative h-4 bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${stats.progressPercent || 0}%`,
+                      background: 'repeating-linear-gradient(135deg, #f97316 0px, #f97316 8px, #ea6b0e 8px, #ea6b0e 16px)',
+                    }}
+                  />
                 </div>
               }
             />
