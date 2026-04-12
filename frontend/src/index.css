@@ -31,6 +31,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    user-select: none;
 }
 
 html {
@@ -92,6 +93,7 @@ input, select, textarea {
 /* iOS safe area for fixed navbars */
 .safe-nav {
     padding-top: calc(env(safe-area-inset-top) + 1rem);
+    padding-bottom: 0.75rem;
 }
 
 /* Glassmorphism utility */

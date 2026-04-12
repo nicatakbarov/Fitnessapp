@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Send, Bot, Loader2, Sparkles } from 'lucide-react';
 import { supabase, getStoredUser } from '../lib/supabase';
 import BottomNav from '../components/BottomNav';
+import DashboardNav from '../components/DashboardNav';
 
 // XHR-based POST — Capacitor iOS-da native fetch işləmir
 const xhrPost = (url, body, apiKey) =>
@@ -52,6 +53,12 @@ export default function AIChatPage() {
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/');
+  };
 
   // Auth guard
   useEffect(() => {
@@ -218,44 +225,14 @@ export default function AIChatPage() {
       flexDirection: 'column',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif',
     }}>
-
-      {/* ── Header ── */}
-      <div style={{
-        padding: '14px 20px',
-        paddingTop: 'max(14px, env(safe-area-inset-top))',
-        background: 'rgba(15,15,15,0.97)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-      }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 0 16px rgba(34,197,94,0.3)',
-          flexShrink: 0,
-        }}>
-          <Bot size={19} color="white" />
-        </div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>AI Coach</div>
-          <div style={{ fontSize: 11, color: program ? '#4ade80' : '#71717a', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: program ? '#4ade80' : '#71717a', display: 'inline-block' }} />
-            {program ? 'Proqramın yükləndi' : 'Hazırdır'}
-          </div>
-        </div>
-      </div>
+      <DashboardNav user={user} onLogout={handleLogout} activePage="nutrition" />
 
       {/* ── Message list ── */}
       <div style={{
         flex: 1,
         overflowY: 'auto',
         padding: '16px 14px',
+        paddingTop: '104px',
         paddingBottom: 160,
         display: 'flex',
         flexDirection: 'column',
