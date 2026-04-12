@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calendar, TrendingUp, BarChart2, Watch, Scale, Footprints, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
+import { FREE_STARTER_WORKOUTS, TWO_DAY_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS } from '../data/programs';
 import { getStepsLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
 import { Capacitor } from '@capacitor/core';
 
@@ -184,16 +185,51 @@ const ProgressPage = () => {
   // Weight history from localStorage
   const weightHistory = useMemo(() => {
     if (!user) return [];
+    const WORKOUT_MAP = {
+      'free-starter': FREE_STARTER_WORKOUTS,
+      'starter-2day': TWO_DAY_WORKOUTS,
+      'starter': STARTER_WORKOUTS,
+      'transformer': TRANSFORMER_WORKOUTS,
+      'elite-beginner': ELITE_WORKOUTS,
+      'home-beginner': HOME_BEGINNER_WORKOUTS,
+    };
+    const resolveExerciseName = (programId, dayId, exerciseKey) => {
+      const workoutData = WORKOUT_MAP[programId];
+      if (!workoutData) return null;
+      const allDays = workoutData?.weeks?.flatMap(w => w.days) || [];
+      const day = allDays.find(d => d.id === dayId);
+      if (!day) return null;
+      const [section, idxStr] = exerciseKey.split('-');
+      const idx = parseInt(idxStr, 10);
+      if (section === 'main') return day.mainWorkout?.[idx]?.name || null;
+      if (section === 'warmup') return day.warmup?.exercises?.[idx]?.name || null;
+      if (section === 'cooldown') return day.cooldown?.exercises?.[idx]?.name || null;
+      return null;
+    };
     try {
       const all = JSON.parse(localStorage.getItem('workout_weights') || '{}');
       const entries = [];
       for (const [key, val] of Object.entries(all)) {
         if (!key.includes(`_${user.id}_`)) continue;
+        // key format: weights_{userId}_{programId}_{dayId}
+        const parts = key.split('_');
+        const userIdIndex = parts.indexOf(user.id.toString()) !== -1
+          ? parts.indexOf(user.id.toString())
+          : parts.findIndex((_, i) => parts.slice(1, i + 1).join('_') === user.id);
+        // Extract programId and dayId after "weights_{userId}_"
+        const prefix = `weights_${user.id}_`;
+        const rest = key.slice(prefix.length); // "{programId}_{dayId}"
+        // dayId is the last segment (e.g. "week1-day2"), programId is what's before it
+        const lastDash = rest.lastIndexOf('_');
+        const programId = rest.slice(0, lastDash);
+        const dayId = rest.slice(lastDash + 1);
         const { weights, completedAt } = val;
         for (const [exerciseKey, weight] of Object.entries(weights)) {
           if (weight) {
+            const resolvedName = resolveExerciseName(programId, dayId, exerciseKey);
             entries.push({
               exerciseKey,
+              exerciseName: resolvedName || exerciseKey,
               weight,
               date: new Date(completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               ts: new Date(completedAt).getTime(),
@@ -652,7 +688,7 @@ const ProgressPage = () => {
                           {index === 2 && <Trophy className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />}
                           {index > 2 && <div className="w-3.5" />}
                           <span className="text-white text-sm capitalize truncate">
-                            {item.exerciseKey.replace('main-', 'Exercise ')}
+                            {item.exerciseName}
                           </span>
                         </div>
                         <span className="text-green-400 font-bold text-sm text-center">{item.weight}</span>
