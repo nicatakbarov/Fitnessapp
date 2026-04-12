@@ -674,7 +674,7 @@ const ProgressPage = () => {
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
                     <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-2 border-b border-zinc-800 text-zinc-500 text-xs font-medium uppercase">
                       <span>Exercise</span>
-                      <span className="text-center">Best Weight</span>
+                      <span className="text-center block">Best Weight</span>
                       <span className="text-right">Date</span>
                     </div>
                     {personalRecords.map((item, index) => (
@@ -691,7 +691,7 @@ const ProgressPage = () => {
                             {item.exerciseName}
                           </span>
                         </div>
-                        <span className="text-green-400 font-bold text-sm text-center">{item.weight}</span>
+                        <span className="text-green-400 font-bold text-sm text-center block">{item.weight}</span>
                         <span className="text-zinc-500 text-xs text-right">{item.date}</span>
                       </div>
                     ))}
