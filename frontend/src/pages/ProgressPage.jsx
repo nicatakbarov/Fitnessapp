@@ -294,39 +294,6 @@ const ProgressPage = () => {
     return Object.values(prMap).sort((a, b) => b.weightNum - a.weightNum);
   }, [weightHistory]);
 
-  // Generate month calendar
-  const calendarData = useMemo(() => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay();
-
-    const completedDates = new Set(
-      progress
-        .filter(p => p.completed && p.completed_at)
-        .map(p => new Date(p.completed_at).toDateString())
-    );
-
-    const days = [];
-    for (let i = 0; i < startingDay; i++) days.push({ empty: true });
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const isToday = date.toDateString() === today.toDateString();
-      const isPast = date < today && !isToday;
-      const isCompleted = completedDates.has(date.toDateString());
-      days.push({ day, date, isCompleted, isToday, isPast, isFuture: !isPast && !isToday });
-    }
-
-    return {
-      monthName: today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-      days,
-    };
-  }, [progress]);
-
   // Workout history
   const workoutHistory = useMemo(() => {
     return progress
@@ -654,42 +621,6 @@ const ProgressPage = () => {
                     ))}
                   </div>
                   <p className="text-zinc-600 text-xs mt-3">Last 8 weeks — workouts completed per week</p>
-                </div>
-              </section>
-
-              {/* Monthly Calendar */}
-              <section data-testid="monthly-calendar">
-                <h2 className="font-heading text-lg font-bold text-white uppercase mb-4">{calendarData.monthName}</h2>
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
-                  <div className="grid grid-cols-7 gap-2 mb-4">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                      <div key={day} className="text-center text-zinc-500 text-xs font-medium">{day}</div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {calendarData.days.map((day, index) => (
-                      <div
-                        key={index}
-                        className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-colors ${
-                          day.empty ? ''
-                          : day.isToday ? 'ring-2 ring-blue-500 bg-blue-500/10 text-white'
-                          : day.isCompleted ? 'bg-green-500/20 text-green-400'
-                          : day.isFuture ? 'bg-zinc-800/30 text-zinc-600'
-                          : 'bg-zinc-800/50 text-zinc-400'
-                        }`}
-                      >
-                        {!day.empty && day.day}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-zinc-800">
-                    <div className="flex items-center gap-2 text-xs text-zinc-400">
-                      <div className="w-4 h-4 rounded bg-green-500/20" /><span>Workout completed</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-400">
-                      <div className="w-4 h-4 rounded ring-2 ring-blue-500" /><span>Today</span>
-                    </div>
-                  </div>
                 </div>
               </section>
 
