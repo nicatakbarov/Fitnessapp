@@ -36,6 +36,18 @@ const DayWorkoutPage = () => {
       setProgress(data || []);
       const completed = (data || []).some(p => p.day_id === dayId && p.completed);
       setIsCompleted(completed);
+      if (completed) {
+        // Load previously saved weights and mark all exercises as checked
+        const lsKey = `weights_${userId}_${id}_${dayId}`;
+        const all = JSON.parse(localStorage.getItem('workout_weights') || '{}');
+        const saved = all[lsKey];
+        if (saved?.weights) {
+          setWeights(saved.weights);
+          const allChecked = {};
+          Object.keys(saved.weights).forEach(k => { allChecked[k] = true; });
+          setChecked(allChecked);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch progress:', err);
     }
@@ -140,6 +152,16 @@ const DayWorkoutPage = () => {
     }
     return ex;
   };
+
+  // When viewing a completed workout, mark all exercises as checked
+  useEffect(() => {
+    if (!isCompleted || !dayData) return;
+    const allChecked = {};
+    dayData.warmup.exercises.forEach((_, i) => { allChecked[`warmup-${i}`] = true; });
+    dayData.mainWorkout.forEach((_, i) => { allChecked[`main-${i}`] = true; });
+    dayData.cooldown.exercises.forEach((_, i) => { allChecked[`cooldown-${i}`] = true; });
+    setChecked(allChecked);
+  }, [isCompleted, dayData]);
 
   // Calculate if all exercises are checked
   const totalExercises = dayData
