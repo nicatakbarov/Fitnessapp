@@ -457,9 +457,9 @@ const DashboardPage = () => {
               label="Program Complete"
               testId="stat-progress"
               chart={
-                <div className="relative h-4 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="relative h-4 bg-zinc-800 rounded overflow-hidden">
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                    className="absolute inset-y-0 left-0 rounded-r transition-all duration-500"
                     style={{
                       width: `${stats.progressPercent || 0}%`,
                       background: 'repeating-linear-gradient(135deg, #f97316 0px, #f97316 8px, #ea6b0e 8px, #ea6b0e 16px)',
@@ -597,9 +597,9 @@ const DashboardPage = () => {
                 View Program <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-            <div className="relative h-5 bg-zinc-800 rounded-full overflow-hidden mb-3">
+            <div className="relative h-5 bg-zinc-800 rounded overflow-hidden mb-3">
               <div
-                className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                className="absolute inset-y-0 left-0 rounded-r transition-all duration-500"
                 style={{
                   width: `${stats.progressPercent || 0}%`,
                   background: 'repeating-linear-gradient(135deg, #f97316 0px, #f97316 8px, #ea6b0e 8px, #ea6b0e 16px)',
