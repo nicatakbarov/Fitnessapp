@@ -672,7 +672,7 @@ const ProgressPage = () => {
                   </div>
                 ) : (
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="grid grid-cols-3 px-4 py-2 border-b border-zinc-800 text-zinc-500 text-xs font-medium uppercase">
+                    <div className="grid grid-cols-[2fr_1fr_1fr] px-4 py-2 border-b border-zinc-800 text-zinc-500 text-xs font-medium uppercase">
                       <span>Exercise</span>
                       <span className="text-center">Best Weight</span>
                       <span className="text-right">Date</span>
@@ -680,7 +680,7 @@ const ProgressPage = () => {
                     {personalRecords.map((item, index) => (
                       <div
                         key={index}
-                        className={`grid grid-cols-3 px-4 py-3 items-center ${index !== personalRecords.length - 1 ? 'border-b border-zinc-800/60' : ''}`}
+                        className={`grid grid-cols-[2fr_1fr_1fr] px-4 py-3 items-center ${index !== personalRecords.length - 1 ? 'border-b border-zinc-800/60' : ''}`}
                       >
                         <div className="flex items-center gap-2">
                           {index === 0 && <Trophy className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />}
