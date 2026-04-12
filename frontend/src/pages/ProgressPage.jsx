@@ -682,11 +682,11 @@ const ProgressPage = () => {
                         key={index}
                         className={`grid grid-cols-[2fr_1fr_1fr] px-4 py-3 items-center ${index !== personalRecords.length - 1 ? 'border-b border-zinc-800/60' : ''}`}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           {index === 0 && <Trophy className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />}
                           {index === 1 && <Trophy className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />}
                           {index === 2 && <Trophy className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />}
-                          {index > 2 && <div className="w-3.5" />}
+                          {index > 2 && <div className="w-3.5 flex-shrink-0" />}
                           <span className="text-white text-sm capitalize truncate">
                             {item.exerciseName}
                           </span>
