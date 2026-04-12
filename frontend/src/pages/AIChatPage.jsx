@@ -53,6 +53,7 @@ export default function AIChatPage() {
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const isInitialRender = useRef(true);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -66,8 +67,12 @@ export default function AIChatPage() {
     loadProgram();
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (skip initial render)
   useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading, pendingMod]);
 
