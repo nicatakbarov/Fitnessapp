@@ -478,22 +478,20 @@ const ProgressPage = () => {
 
                                 {/* Weight value display */}
                                 <style>{`
-                                  @keyframes tickUp   { from { transform: translateY(40%); opacity:0 } to { transform: translateY(0); opacity:1 } }
-                                  @keyframes tickDown { from { transform: translateY(-40%); opacity:0 } to { transform: translateY(0); opacity:1 } }
+                                  @keyframes tickUp   { from { transform: translateY(30%); opacity:0.3 } to { transform: translateY(0); opacity:1 } }
+                                  @keyframes tickDown { from { transform: translateY(-30%); opacity:0.3 } to { transform: translateY(0); opacity:1 } }
                                 `}</style>
                                 <div style={{display:'flex',alignItems:'baseline',gap:'3px',marginTop:'4px'}}>
-                                  <div style={{overflow:'hidden',lineHeight:1}}>
-                                    <span
-                                      key={weightAnimKey}
-                                      style={{
-                                        fontSize:'38px',fontWeight:'800',color:'white',
-                                        letterSpacing:'-1px',display:'inline-block',
-                                        animation:`${weightDirRef.current >= 0 ? 'tickUp' : 'tickDown'} 0.09s ease-out`,
-                                      }}
-                                    >
-                                      {rulerWeight}
-                                    </span>
-                                  </div>
+                                  <span
+                                    key={weightAnimKey}
+                                    style={{
+                                      fontSize:'38px',fontWeight:'800',color:'white',
+                                      letterSpacing:'-1px',display:'inline-block',
+                                      animation:`${weightDirRef.current >= 0 ? 'tickUp' : 'tickDown'} 0.1s ease-out`,
+                                    }}
+                                  >
+                                    {rulerWeight}
+                                  </span>
                                   <span style={{fontSize:'15px',color:'#34d399',fontWeight:'600'}}>kg</span>
                                 </div>
 
