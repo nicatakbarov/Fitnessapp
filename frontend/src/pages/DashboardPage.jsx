@@ -345,80 +345,21 @@ const DashboardPage = () => {
     );
   }
 
-  const MOCK_MODE = !activeProgram;
-
-  const mockStats = {
-    streak: 8,
-    completedWorkouts: 8,
-    totalWorkouts: 24,
-    progressPercent: 33,
-    currentWeek: 3,
-    totalWeeks: 8,
-    daysPerWeek: 3,
-  };
-  const mockLast7Days = [
-    { done: true }, { done: true }, { done: false },
-    { done: true }, { done: true }, { done: false }, { done: false },
-  ];
-  const mockWeeklyBarData = [
-    { count: 3 }, { count: 3 }, { count: 2 },
-    { count: 0 }, { count: 0 }, { count: 0 },
-    { count: 0 }, { count: 0 },
-  ];
-  const mockProgramName = 'Starter Program';
-  const mockProgramLink = '/browse?program=free-starter';
-  const mockWeekDays = ['S','M','T','W','T','F','S'].map((d, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - date.getDay() + i);
-    return {
-      dayLetter: d,
-      dayNumber: date.getDate(),
-      isToday: i === date.getDay(),
-      isCompleted: i < 2,
-      isMissed: false,
-      isWorkoutDay: [1, 3, 5].includes(i),
-      isRestDay: ![1, 3, 5].includes(i),
-      isPast: i < new Date().getDay(),
-      workout: null,
-    };
-  });
-  const mockUpcoming = [
-    {
-      dayName: 'Today', isToday: true, isRestDay: false, isCompleted: false,
-      workout: { id: 'mock-day-1', dayNumber: 7, title: 'Push Day', mainWorkout: [{ name: 'Bench Press' }, { name: 'Shoulder Press' }, { name: 'Tricep Dips' }] },
-    },
-    { dayName: 'Wednesday', isToday: false, isRestDay: true, workout: null },
-    {
-      dayName: 'Thursday', isToday: false, isRestDay: false, isCompleted: false,
-      workout: { id: 'mock-day-2', dayNumber: 8, title: 'Pull Day', mainWorkout: [{ name: 'Pull-ups' }, { name: 'Barbell Row' }, { name: 'Bicep Curl' }] },
-    },
-  ];
-
-  const displayStats = MOCK_MODE ? mockStats : stats;
-  const displayLast7Days = MOCK_MODE ? mockLast7Days : last7Days;
-  const displayWeeklyBarData = MOCK_MODE ? mockWeeklyBarData : weeklyBarData;
-  const displayProgramName = MOCK_MODE ? mockProgramName : programName;
-  const displayProgramLink = MOCK_MODE ? mockProgramLink : programLink;
-  const displayWeekDays = MOCK_MODE ? mockWeekDays : weekDays;
-  const displayUpcoming = MOCK_MODE ? mockUpcoming : upcomingWorkouts;
-  const displayIsWorkoutDay = MOCK_MODE ? true : isWorkoutDay;
-  const displayTodayWorkout = MOCK_MODE ? mockUpcoming[0].workout : todayWorkout;
-  const displayIsTodayCompleted = MOCK_MODE ? false : isTodayCompleted;
-
-  // SVG area path for mock mode
-  const displaySvgAreaPath = (() => {
-    const data = displayWeeklyBarData;
-    if (data.length < 2) return { line: 'M0,25 L100,25', fill: 'M0,25 L100,25 L100,30 L0,30 Z' };
-    const maxCount = Math.max(...data.map(w => w.count), 1);
-    const pts = data.map((w, i) => {
-      const x = (i / (data.length - 1)) * 100;
-      const y = 30 - (w.count / maxCount) * 25;
-      return [x, y];
-    });
-    const line = `M${pts.map(([x, y]) => `${x},${y}`).join(' L')}`;
-    const fill = `M${pts[0][0]},${pts[0][1]} L${pts.map(([x, y]) => `${x},${y}`).join(' L')} L100,30 L0,30 Z`;
-    return { line, fill, pts };
-  })();
+  if (!activeProgram) {
+    return (
+      <div className="min-h-screen bg-[#0f0f0f]">
+        <DashboardNav user={user} onLogout={handleLogout} activePage="dashboard" />
+        <main className="pt-24 pb-24 px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
+            <Link to="/my-programs" className="text-green-500 hover:text-green-400 font-medium">
+              Select a program to get started
+            </Link>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="dashboard-page">
@@ -433,7 +374,7 @@ const DashboardPage = () => {
               Welcome back, {user.name?.split(' ')[0]}!
             </h1>
             <p className="text-zinc-400" data-testid="motivation-message">
-              {MOCK_MODE ? "You're on a 8-workout streak! Unstoppable!" : getGreeting()}
+              {getGreeting()}
             </p>
           </section>
 
@@ -443,12 +384,12 @@ const DashboardPage = () => {
             <StatCard
               icon={<Flame className="w-4 h-4 text-orange-500" />}
               gradient="from-orange-500/10 to-transparent"
-              value={displayStats.streak}
+              value={stats.streak}
               label="Workouts Done"
               testId="stat-streak"
               chart={
                 <div className="flex items-end gap-0.5 h-10">
-                  {displayLast7Days.map((day, i) => (
+                  {last7Days.map((day, i) => (
                     <div
                       key={i}
                       className={`flex-1 rounded-sm ${day.done ? 'bg-orange-500' : 'bg-zinc-700'}`}
@@ -463,8 +404,8 @@ const DashboardPage = () => {
             <StatCard
               icon={<CheckCircle2 className="w-4 h-4 text-green-500" />}
               gradient="from-green-500/10 to-transparent"
-              value={displayStats.completedWorkouts}
-              sublabel={`/ ${displayStats.totalWorkouts}`}
+              value={stats.completedWorkouts}
+              sublabel={`/ ${stats.totalWorkouts}`}
               label="Completed"
               testId="stat-workouts"
               chart={
@@ -475,10 +416,10 @@ const DashboardPage = () => {
                       <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <path d={displaySvgAreaPath.fill} fill="url(#greenGrad)" />
-                  <path d={displaySvgAreaPath.line} fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  {displaySvgAreaPath.pts?.map(([x, y], i) => {
-                    if (i === displayStats.currentWeek - 1) {
+                  <path d={svgAreaPath.fill} fill="url(#greenGrad)" />
+                  <path d={svgAreaPath.line} fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {svgAreaPath.pts?.map(([x, y], i) => {
+                    if (i === stats.currentWeek - 1) {
                       return <circle key={i} cx={x} cy={y} r="2.5" fill="#22c55e" />;
                     }
                     return null;
@@ -491,13 +432,13 @@ const DashboardPage = () => {
             <StatCard
               icon={<Calendar className="w-4 h-4 text-blue-500" />}
               gradient="from-blue-500/10 to-transparent"
-              value={`Week ${displayStats.currentWeek}`}
-              sublabel={`of ${displayStats.totalWeeks}`}
+              value={`Week ${stats.currentWeek}`}
+              sublabel={`of ${stats.totalWeeks}`}
               label="Current Week"
               testId="stat-week"
               chart={
                 <div className="flex gap-1">
-                  {displayWeekDays.map((day, i) => (
+                  {weekDays.map((day, i) => (
                     <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
                       <div className={`w-full aspect-square rounded-full flex items-center justify-center text-[9px] font-bold
                         ${day.isCompleted
@@ -519,7 +460,7 @@ const DashboardPage = () => {
             <StatCard
               icon={<Trophy className="w-4 h-4 text-yellow-500" />}
               gradient="from-yellow-500/10 to-transparent"
-              value={`${displayStats.progressPercent}%`}
+              value={`${stats.progressPercent}%`}
               label="Program Complete"
               testId="stat-progress"
               chart={
@@ -527,7 +468,7 @@ const DashboardPage = () => {
                   <div
                     className="absolute inset-y-0 left-0 transition-all duration-500"
                     style={{
-                      width: `${displayStats.progressPercent || 0}%`,
+                      width: `${stats.progressPercent || 0}%`,
                       background: 'repeating-linear-gradient(135deg, #f97316 0px, #f97316 8px, #ea6b0e 8px, #ea6b0e 16px)',
                     }}
                   >
@@ -540,16 +481,16 @@ const DashboardPage = () => {
 
           {/* Today's Workout */}
           <section
-            className={`bg-zinc-900/80 rounded-2xl p-6 md:p-8 ${displayIsWorkoutDay && displayTodayWorkout ? 'border-l-4 border-green-500' : ''}`}
+            className={`bg-zinc-900/80 rounded-2xl p-6 md:p-8 ${isWorkoutDay && todayWorkout ? 'border-l-4 border-green-500' : ''}`}
             data-testid="todays-workout-card"
           >
-            {displayIsWorkoutDay && displayTodayWorkout ? (
+            {isWorkoutDay && todayWorkout ? (
               <>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-heading text-xl font-bold text-white uppercase">
                     Today's Workout
                   </h2>
-                  {displayIsTodayCompleted && (
+                  {isTodayCompleted && (
                     <span className="flex items-center gap-2 text-green-400 font-medium">
                       <CheckCircle2 className="w-5 h-5" />
                       Completed Today!
@@ -557,12 +498,12 @@ const DashboardPage = () => {
                   )}
                 </div>
                 <h3 className="font-heading text-2xl md:text-3xl font-bold text-white mb-4">
-                  Day {displayTodayWorkout.dayNumber} — {displayTodayWorkout.title}
+                  Day {todayWorkout.dayNumber} — {todayWorkout.title}
                 </h3>
                 <div className="flex flex-wrap gap-4 mb-6 text-sm">
                   <span className="flex items-center gap-2 text-zinc-400">
                     <Dumbbell className="w-4 h-4 text-green-500" />
-                    {displayTodayWorkout.mainWorkout?.length} exercises
+                    {todayWorkout.mainWorkout?.length} exercises
                   </span>
                   <span className="flex items-center gap-2 text-zinc-400">
                     <Clock className="w-4 h-4 text-green-500" />
@@ -576,21 +517,21 @@ const DashboardPage = () => {
                 <div className="mb-6">
                   <p className="text-zinc-500 text-sm mb-2">Preview:</p>
                   <div className="flex flex-wrap gap-2">
-                    {displayTodayWorkout.mainWorkout?.slice(0, 3).map((ex, i) => (
+                    {todayWorkout.mainWorkout?.slice(0, 3).map((ex, i) => (
                       <span key={i} className="px-3 py-1 bg-zinc-800 rounded-full text-sm text-zinc-300">
                         {ex.name}
                       </span>
                     ))}
-                    {(displayTodayWorkout.mainWorkout?.length || 0) > 3 && (
+                    {(todayWorkout.mainWorkout?.length || 0) > 3 && (
                       <span className="px-3 py-1 bg-zinc-800 rounded-full text-sm text-zinc-500">
-                        +{displayTodayWorkout.mainWorkout.length - 3} more
+                        +{todayWorkout.mainWorkout.length - 3} more
                       </span>
                     )}
                   </div>
                 </div>
-                {!displayIsTodayCompleted && (
+                {!isTodayCompleted && (
                   <Button
-                    onClick={() => !MOCK_MODE && navigate(`/program/${activeProgram.program_id}/day/${displayTodayWorkout.id}`)}
+                    onClick={() => navigate(`/program/${activeProgram.program_id}/day/${todayWorkout.id}`)}
                     data-testid="start-today-workout"
                     className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-8 rounded-full text-lg group"
                   >
@@ -617,10 +558,10 @@ const DashboardPage = () => {
               This Week
             </h2>
             <div className="flex justify-between gap-2">
-              {displayWeekDays.map((day, i) => (
+              {weekDays.map((day, i) => (
                 <div
                   key={i}
-                  onClick={() => !MOCK_MODE && day.isCompleted && day.workout && navigate(`/program/${activeProgram.program_id}/day/${day.workout.id}`)}
+                  onClick={() => day.isCompleted && day.workout && navigate(`/program/${activeProgram.program_id}/day/${day.workout.id}`)}
                   className={`flex-1 flex flex-col items-center p-3 rounded-xl transition-all ${
                     day.isToday
                       ? 'bg-green-500/20 border-2 border-green-500'
@@ -656,10 +597,10 @@ const DashboardPage = () => {
           <section className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6" data-testid="program-progress">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-heading text-lg font-bold text-white">
-                {displayProgramName}
+                {programName}
               </h2>
               <Link
-                to={displayProgramLink}
+                to={programLink}
                 className="text-zinc-400 hover:text-zinc-300 text-sm flex items-center gap-1"
               >
                 View Program <ChevronRight className="w-4 h-4" />
@@ -669,13 +610,13 @@ const DashboardPage = () => {
               <div
                 className="absolute inset-y-0 left-0 rounded-r transition-all duration-500"
                 style={{
-                  width: `${displayStats.progressPercent || 0}%`,
+                  width: `${stats.progressPercent || 0}%`,
                   background: 'repeating-linear-gradient(135deg, #22c55e 0px, #22c55e 8px, #16a34a 8px, #16a34a 16px)',
                 }}
               />
             </div>
             <p className="text-zinc-400 text-sm">
-              {displayStats.completedWorkouts} of {displayStats.totalWorkouts} workouts completed
+              {stats.completedWorkouts} of {stats.totalWorkouts} workouts completed
             </p>
           </section>
 
@@ -685,7 +626,7 @@ const DashboardPage = () => {
               Upcoming Schedule
             </h2>
             <div className="space-y-3">
-              {displayUpcoming.map((item, i) => (
+              {upcomingWorkouts.map((item, i) => (
                 <div
                   key={i}
                   className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center justify-between"
@@ -705,7 +646,7 @@ const DashboardPage = () => {
                   </div>
                   {!item.isRestDay && (
                     <Button
-                      onClick={() => !MOCK_MODE && navigate(`/program/${activeProgram.program_id}/day/${item.workout?.id}`)}
+                      onClick={() => navigate(`/program/${activeProgram.program_id}/day/${item.workout?.id}`)}
                       variant={item.isToday && !item.isCompleted ? 'default' : 'outline'}
                       size="sm"
                       className={item.isToday && !item.isCompleted
