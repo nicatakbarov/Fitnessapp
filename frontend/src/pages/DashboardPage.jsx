@@ -346,19 +346,8 @@ const DashboardPage = () => {
   }
 
   if (!activeProgram) {
-    return (
-      <div className="min-h-screen bg-[#0f0f0f]">
-        <DashboardNav user={user} onLogout={handleLogout} activePage="dashboard" />
-        <main className="pt-24 pb-24 px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            <Link to="/my-programs" className="text-green-500 hover:text-green-400 font-medium">
-              Select a program to get started
-            </Link>
-          </div>
-        </main>
-        <BottomNav />
-      </div>
-    );
+    navigate('/browse');
+    return null;
   }
 
   return (

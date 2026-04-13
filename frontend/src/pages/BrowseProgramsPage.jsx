@@ -65,7 +65,7 @@ const BrowseProgramsPage = () => {
     if (!plan || !user) return;
 
     if (ownedPrograms.includes(plan.id)) {
-      navigate('/my-programs');
+      navigate('/dashboard');
       return;
     }
 
@@ -79,7 +79,7 @@ const BrowseProgramsPage = () => {
         status: 'active',
       });
       if (error) throw error;
-      navigate('/my-programs');
+      navigate('/dashboard');
     } catch (err) {
       alert('Failed to enroll. Please try again.');
     } finally {
