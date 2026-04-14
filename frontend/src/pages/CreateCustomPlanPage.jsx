@@ -1,190 +1,105 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Target, Flame, Zap, Activity, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { supabase } from '../lib/supabase';
-import { EQUIPMENT_DB } from '../data/programs';
-import DayBuilder from '../components/CustomPlan/DayBuilder';
+import BodyMap from '../components/BodyMap';
+
+const GOALS = [
+  { id: 'muscle',      label: 'Kütlə artırmaq', icon: Target,   emoji: '💪' },
+  { id: 'lose_weight', label: 'Arıqlamaq',       icon: Flame,    emoji: '🔥' },
+  { id: 'strength',    label: 'Güc artırmaq',    icon: Zap,      emoji: '⚡' },
+  { id: 'general',     label: 'Ümumi fitness',   icon: Activity, emoji: '🏃' },
+];
+
+const DAYS_OPTIONS = [2, 3, 4, 5, 6];
+const MINUTES_OPTIONS = [30, 45, 60, 90];
+
+const ALL_MUSCLES = [
+  'chest', 'back', 'shoulders', 'arms', 'abs', 'legs', 'glutes',
+];
+
+const MUSCLE_LABELS = {
+  chest:     'Sinə',
+  back:      'Kürək',
+  shoulders: 'Çiyinlər',
+  arms:      'Qollar',
+  abs:       'Qarın',
+  legs:      'Ayaqlar',
+  glutes:    'Glutes',
+};
 
 const CreateCustomPlanPage = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  // Step 1: Plan Metadata
-  const [planMetadata, setPlanMetadata] = useState({
-    name: '',
-    description: '',
-    weeksCount: 4,
-    daysPerWeek: 3
-  });
+  const [goal, setGoal] = useState(null);
+  const [selectedMuscles, setSelectedMuscles] = useState([]);
+  const [daysPerWeek, setDaysPerWeek] = useState(null);
+  const [minutesPerWorkout, setMinutesPerWorkout] = useState(null);
 
-  // Step 2: Weeks/Days Builder
-  const [weeksData, setWeeksData] = useState([]);
-
-  // Initialize
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      navigate('/login');
-      return;
-    }
-    setUser(JSON.parse(userData));
-  }, [navigate]);
-
-  // Generate template week (single week, repeated N times when saving)
-  useEffect(() => {
-    if (currentStep === 2 && weeksData.length === 0) {
-      const days = [];
-      for (let d = 1; d <= planMetadata.daysPerWeek; d++) {
-        days.push({
-          id: `custom-w1-d${d}`,
-          weekNumber: 1,
-          dayNumber: d,
-          dayName: getDayName(d),
-          title: '',
-          warmup: { duration: '5 min', exercises: [] },
-          mainWorkout: [],
-          cooldown: { duration: '5 min', exercises: [] }
-        });
-      }
-      setWeeksData([{ week: 1, days }]);
-    }
-  }, [currentStep, planMetadata.daysPerWeek, weeksData.length]);
-
-  function getDayName(dayNum) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return days[(dayNum - 1) % 7];
-  }
-
-  const validateStep1 = () => {
-    if (!planMetadata.name.trim()) {
-      setError('Plan name is required');
-      return false;
-    }
-    if (planMetadata.name.length < 2) {
-      setError('Plan name must be at least 2 characters');
-      return false;
-    }
-    if (planMetadata.weeksCount < 1 || planMetadata.weeksCount > 52) {
-      setError('Weeks must be between 1 and 52');
-      return false;
-    }
-    if (planMetadata.daysPerWeek < 1 || planMetadata.daysPerWeek > 7) {
-      setError('Days per week must be between 1 and 7');
-      return false;
-    }
-    setError('');
-    return true;
-  };
-
-  const validateStep2 = () => {
-    for (const week of weeksData) {
-      for (const day of week.days) {
-        if (day.mainWorkout.length === 0) {
-          setError(`${day.dayName} has no main workout exercises`);
-          return false;
-        }
-      }
-    }
-    setError('');
-    return true;
-  };
-
-  const handleSavePlan = async () => {
-    if (!user) return;
-
-    if (!validateStep2()) {
-      setCurrentStep(2);
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      // Build final plan JSON — clone template week for each week
-      const templateDays = weeksData[0]?.days || [];
-      const planJson = {
-        id: `custom-${Date.now()}`,
-        name: planMetadata.name,
-        weeks: Array.from({ length: planMetadata.weeksCount }, (_, i) => ({
-          week: i + 1,
-          days: templateDays.map(day => ({
-            id: `custom-w${i + 1}-d${day.dayNumber}`,
-            dayNumber: day.dayNumber,
-            dayName: day.dayName,
-            title: day.title,
-            warmup: day.warmup,
-            mainWorkout: day.mainWorkout,
-            cooldown: day.cooldown
-          }))
-        }))
-      };
-
-      // Insert into custom_plans
-      const { data: customPlan, error: planError } = await supabase
-        .from('custom_plans')
-        .insert({
-          user_id: user.id,
-          name: planMetadata.name,
-          description: planMetadata.description,
-          weeks_count: planMetadata.weeksCount,
-          days_per_week: planMetadata.daysPerWeek,
-          plan_data: planJson,
-          required_equipment: ['bodyweight']
-        })
-        .select()
-        .single();
-
-      if (planError) throw planError;
-
-      // Insert into purchases
-      const { error: purchaseError } = await supabase
-        .from('purchases')
-        .insert({
-          user_id: user.id,
-          program_id: `custom-${customPlan.id}`,
-          program_name: planMetadata.name,
-          price: 0,
-          status: 'active'
-        });
-
-      if (purchaseError) throw purchaseError;
-
-      navigate('/my-programs');
-    } catch (err) {
-      setError(err.message || 'Failed to save plan. Please try again.');
-      setLoading(false);
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1: return goal !== null;
+      case 2: return selectedMuscles.length > 0;
+      case 3: return daysPerWeek !== null && minutesPerWorkout !== null;
+      default: return true;
     }
   };
 
-  if (!user) return null;
+  const handleNext = () => {
+    if (!canProceed()) return;
+    if (currentStep < 4) setCurrentStep(currentStep + 1);
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  const handleToggleMuscle = (muscle) => {
+    setSelectedMuscles((prev) =>
+      prev.includes(muscle) ? prev.filter((m) => m !== muscle) : [...prev, muscle]
+    );
+  };
+
+  const handleSelectAllMuscles = () => {
+    if (selectedMuscles.length === ALL_MUSCLES.length) {
+      setSelectedMuscles([]);
+    } else {
+      setSelectedMuscles([...ALL_MUSCLES]);
+    }
+  };
+
+  const handleCreate = () => {
+    const goalObj = GOALS.find((g) => g.id === goal);
+    const planConfig = { goal, muscles: selectedMuscles, daysPerWeek, minutesPerWorkout };
+    localStorage.setItem('pendingPlanConfig', JSON.stringify(planConfig));
+    navigate('/generating', {
+      state: { programName: goalObj?.label || 'Fərdi Plan', planConfig },
+    });
+  };
+
+  const goalObj = GOALS.find((g) => g.id === goal);
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f]" data-testid="create-custom-plan-page">
+    <div className="min-h-screen bg-[#0f0f0f] flex flex-col" data-testid="create-custom-plan-page">
       {/* Navbar */}
       <nav className="safe-nav fixed top-0 left-0 right-0 z-50 glass">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <h1 className="font-heading text-2xl font-bold text-white">Create Custom Plan</h1>
+          <h1 className="font-heading text-2xl font-bold text-white">Fərdi Plan</h1>
           <button
-            onClick={() => navigate('/dashboard')}
-            className="text-zinc-400 hover:text-white transition-colors"
+            onClick={() => navigate('/browse')}
+            className="text-zinc-400 hover:text-white transition-colors text-xl"
           >
             ✕
           </button>
         </div>
       </nav>
 
-      <main className="pt-24 pb-16 px-6">
+      <main className="pt-24 pb-32 px-6 flex-1">
         <div className="max-w-3xl mx-auto">
-          {/* Progress Indicator — 3 steps */}
+          {/* Progress Bar */}
           <div className="flex gap-2 mb-8">
-            {[1, 2, 3].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <div
                 key={step}
                 className={`flex-1 h-2 rounded-full transition-colors ${
@@ -194,205 +109,179 @@ const CreateCustomPlanPage = () => {
             ))}
           </div>
 
-          {/* Error Alert */}
-          {error && (
-            <div className="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          {/* Step 1: Plan Details */}
+          {/* Step 1: Goal */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="font-heading text-2xl font-bold text-white mb-2">Plan Details</h2>
-                <p className="text-zinc-400">Let's start by naming your plan</p>
+                <h2 className="font-heading text-2xl font-bold text-white mb-2">Məqsədin nədir?</h2>
+                <p className="text-zinc-400">Məqsədini seç</p>
               </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Plan Name *</Label>
-                  <Input
-                    value={planMetadata.name}
-                    onChange={(e) => setPlanMetadata({ ...planMetadata, name: e.target.value })}
-                    placeholder="e.g. My Home Strength Plan"
-                    className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500 h-12"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Description (Optional)</Label>
-                  <textarea
-                    value={planMetadata.description}
-                    onChange={(e) => setPlanMetadata({ ...planMetadata, description: e.target.value })}
-                    placeholder="Describe your plan goals..."
-                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-4 py-3"
-                    rows="3"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Duration (Weeks)</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="52"
-                      value={planMetadata.weeksCount}
-                      onChange={(e) => setPlanMetadata({ ...planMetadata, weeksCount: parseInt(e.target.value) || 1 })}
-                      className="bg-zinc-900 border-zinc-800 text-white h-12"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Workouts Per Week</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="7"
-                      value={planMetadata.daysPerWeek}
-                      onChange={(e) => setPlanMetadata({ ...planMetadata, daysPerWeek: parseInt(e.target.value) || 1 })}
-                      className="bg-zinc-900 border-zinc-800 text-white h-12"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-6">
-                <Button
-                  onClick={() => navigate('/dashboard')}
-                  variant="outline"
-                  className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (validateStep1()) setCurrentStep(2);
-                  }}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Next <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+              <div className="space-y-3">
+                {GOALS.map((g) => {
+                  const isSelected = goal === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setGoal(g.id)}
+                      className={`w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition-all ${
+                        isSelected
+                          ? 'bg-zinc-900 border-green-500'
+                          : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="text-3xl">{g.emoji}</span>
+                      <span className="text-white text-lg font-semibold">{g.label}</span>
+                      {isSelected && <Check className="w-5 h-5 text-green-500 ml-auto" />}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Step 2: Weekly Template Builder */}
+          {/* Step 2: Muscle Groups */}
           {currentStep === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <h2 className="font-heading text-2xl font-bold text-white mb-2">Build Your Weekly Template</h2>
-                <p className="text-zinc-400">
-                  Set up your {planMetadata.daysPerWeek}-day workout routine. This template will repeat for all {planMetadata.weeksCount} weeks.
-                </p>
+                <h2 className="font-heading text-2xl font-bold text-white mb-2">
+                  Hansı əzələlərə fokuslanmaq istəyirsən?
+                </h2>
+                <p className="text-zinc-400">Ən azı 1 əzələ qrupu seç</p>
+              </div>
+              <button
+                onClick={handleSelectAllMuscles}
+                className={`w-full py-3 px-4 rounded-xl font-semibold transition-colors ${
+                  selectedMuscles.length === ALL_MUSCLES.length
+                    ? 'bg-green-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                {selectedMuscles.length === ALL_MUSCLES.length ? 'Hamısı seçilib ✓' : 'Hamısını seç'}
+              </button>
+              <BodyMap selected={selectedMuscles} onToggle={handleToggleMuscle} />
+            </div>
+          )}
+
+          {/* Step 3: Schedule */}
+          {currentStep === 3 && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="font-heading text-2xl font-bold text-white mb-2">Məşq cədvəlin</h2>
+                <p className="text-zinc-400">Məşq tezliyini və müddətini seç</p>
               </div>
 
-              <div className="space-y-4">
-                {weeksData.map((week, wIdx) => (
-                  <div key={week.week}>
-                    <div className="space-y-3">
-                      {week.days.map((day, dIdx) => (
-                        <DayBuilder
-                          key={day.id}
-                          weekNumber={week.week}
-                          dayNumber={day.dayNumber}
-                          defaultData={day}
-                          onSave={(updatedDay) => {
-                            const newWeeks = [...weeksData];
-                            newWeeks[wIdx].days[dIdx] = updatedDay;
-                            setWeeksData(newWeeks);
-                          }}
-                          onClose={() => {}}
-                          availableEquipment={EQUIPMENT_DB.map(e => e.key)}
-                          bilingual={true}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <p className="text-white font-semibold">Həftədə neçə gün?</p>
+                <div className="flex gap-2">
+                  {DAYS_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setDaysPerWeek(d)}
+                      className={`flex-1 py-3 rounded-xl font-bold text-lg transition-colors ${
+                        daysPerWeek === d
+                          ? 'bg-green-600 text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-6">
-                <Button
-                  onClick={() => setCurrentStep(1)}
-                  variant="outline"
-                  className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(3)}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Review <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+              <div className="space-y-3">
+                <p className="text-white font-semibold">Hər məşq neçə dəqiqə?</p>
+                <div className="flex gap-2">
+                  {MINUTES_OPTIONS.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setMinutesPerWorkout(m)}
+                      className={`flex-1 py-3 rounded-xl font-bold text-lg transition-colors ${
+                        minutesPerWorkout === m
+                          ? 'bg-green-600 text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 3: Review & Save */}
-          {currentStep === 3 && (
+          {/* Step 4: Confirm */}
+          {currentStep === 4 && (
             <div className="space-y-6">
               <div>
-                <h2 className="font-heading text-2xl font-bold text-white mb-2">Review Your Plan</h2>
-                <p className="text-zinc-400">Make sure everything looks good before saving</p>
+                <h2 className="font-heading text-2xl font-bold text-white mb-2">Proqramın hazırdır!</h2>
+                <p className="text-zinc-400">Seçimlərini yoxla və proqramı yarat</p>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5">
                 <div>
-                  <p className="text-zinc-500 text-sm">Plan Name</p>
-                  <p className="text-white font-bold text-lg">{planMetadata.name}</p>
-                </div>
-
-                <div>
-                  <p className="text-zinc-500 text-sm">Duration</p>
-                  <p className="text-white">{planMetadata.weeksCount} weeks, {planMetadata.daysPerWeek} workouts/week</p>
-                </div>
-
-                {planMetadata.description ? (
-                  <div>
-                    <p className="text-zinc-500 text-sm">Description</p>
-                    <p className="text-white">{planMetadata.description}</p>
+                  <p className="text-zinc-500 text-sm mb-1">Məqsəd</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{goalObj?.emoji}</span>
+                    <span className="text-white font-bold text-lg">{goalObj?.label}</span>
                   </div>
-                ) : null}
+                </div>
 
-                <div className="border-t border-zinc-800 pt-4">
-                  <p className="text-zinc-500 text-sm">Weekly Template</p>
-                  <p className="text-white text-lg">
-                    {weeksData[0]?.days.reduce((t, d) => t + d.mainWorkout.length, 0) || 0} exercises/week
-                    × {planMetadata.weeksCount} weeks = {(weeksData[0]?.days.reduce((t, d) => t + d.mainWorkout.length, 0) || 0) * planMetadata.weeksCount} total
+                <div>
+                  <p className="text-zinc-500 text-sm mb-2">Əzələ qrupları</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMuscles.map((m) => (
+                      <span key={m} className="bg-zinc-800 text-zinc-200 px-3 py-1 rounded-full text-sm">
+                        {MUSCLE_LABELS[m] || m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-zinc-500 text-sm mb-1">Cədvəl</p>
+                  <p className="text-white font-semibold">
+                    Həftədə {daysPerWeek} gün, {minutesPerWorkout} dəqiqə
                   </p>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-6">
-                <Button
-                  onClick={() => setCurrentStep(2)}
-                  variant="outline"
-                  className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                </Button>
-                <Button
-                  onClick={handleSavePlan}
-                  disabled={loading}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Plan'
-                  )}
-                </Button>
-              </div>
+              <Button
+                onClick={handleCreate}
+                className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-2xl"
+              >
+                Proqramı yarat 🚀
+              </Button>
             </div>
           )}
         </div>
       </main>
+
+      {/* Bottom navigation */}
+      {currentStep < 4 && (
+        <div className="fixed bottom-0 left-0 right-0 glass px-6 py-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+          <div className="max-w-3xl mx-auto flex gap-3">
+            {currentStep > 1 ? (
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 h-12"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" /> Geri
+              </Button>
+            ) : (
+              <div className="flex-1" />
+            )}
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed()}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-40 h-12"
+            >
+              Növbəti <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
