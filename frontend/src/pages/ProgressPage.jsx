@@ -457,7 +457,7 @@ const ProgressPage = () => {
                       <span className="text-xs text-zinc-600">from Apple Health</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Widget 1: Steps — 7-day weekly bars from HealthKit */}
+                      {/* Widget 1: Steps — today's intraday bars */}
                       <div style={{...W, background:'#162b1a'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
                           <div style={iconBox('#1f3d25')}><Footprints size={12} color="#4ade80" /></div>
@@ -468,34 +468,20 @@ const ProgressPage = () => {
                             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 10 000 steps</div>
                           </div>
                         </div>
-                        {(() => {
-                          const todayStr = new Date().toISOString().split('T')[0];
-                          const maxSteps = Math.max(...(weeklySteps.map(d => d.steps)), 1);
-                          const slotW = 183 / 7;
-                          const barW = Math.floor(slotW * 0.55);
-                          return (
-                            <svg viewBox="0 0 183 165" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
-                              {weeklySteps.map((d, i) => {
-                                const barH = d.steps > 0 ? Math.max(4, Math.round((d.steps / maxSteps) * 120)) : 2;
-                                const x = i * slotW + (slotW - barW) / 2;
-                                const isToday = d.date === todayStr;
-                                const goalMet = d.steps >= 10000;
-                                const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('az', { weekday: 'narrow' });
-                                return (
-                                  <g key={i}>
-                                    <rect x={x} y={130 - barH} width={barW} height={barH} rx="2"
-                                      fill={isToday ? '#4ade80' : goalMet ? '#16a34a' : '#166534'}
-                                      opacity={d.steps > 0 ? (isToday ? 1 : 0.65) : 0.2} />
-                                    <text x={i * slotW + slotW / 2} y={148} textAnchor="middle"
-                                      fontSize="8" fill={isToday ? '#4ade80' : 'rgba(255,255,255,0.3)'}>{dayLabel}</text>
-                                  </g>
-                                );
-                              })}
-                            </svg>
-                          );
-                        })()}
+                        <svg viewBox="0 0 183 145" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
+                          {dayBars.map((h, i) => {
+                            const isCurrent = i === currentSlot;
+                            const x = i * (183 / 30) + 1;
+                            return (
+                              <rect key={i} x={x} y={143 - h} width={Math.max(2, 183/30 - 2)} height={h} rx="1.5"
+                                fill={isCurrent ? '#4ade80' : '#1a6632'}
+                                opacity={i > currentSlot ? 0.15 : isCurrent ? 1 : 0.55} />
+                            );
+                          })}
+                        </svg>
+                        <div style={timeRow}><span>00:00</span><span>12:00</span><span>23:59</span></div>
                       </div>
-                      {/* Widget 2: Heart Rate — 7-day weekly bars from HealthKit */}
+                      {/* Widget 2: Heart Rate — today's intraday bars */}
                       <div style={{...W, background:'#1a0e3a'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
                           <div style={iconBox('#2d1a5e')}><Heart size={12} color="#f472b6" /></div>
@@ -506,33 +492,20 @@ const ProgressPage = () => {
                             <div style={{fontSize:'13px',color:'#f472b6',opacity:0.6,marginTop:'2px'}}>BPM avg</div>
                           </div>
                         </div>
-                        {(() => {
-                          const todayStr = new Date().toISOString().split('T')[0];
-                          const maxBpm = Math.max(...(weeklyHeartRate.map(d => d.bpm)), 1);
-                          const slotW = 183 / 7;
-                          const barW = Math.floor(slotW * 0.55);
-                          return (
-                            <svg viewBox="0 0 183 165" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
-                              {weeklyHeartRate.map((d, i) => {
-                                const barH = d.bpm > 0 ? Math.max(4, Math.round((d.bpm / maxBpm) * 120)) : 2;
-                                const x = i * slotW + (slotW - barW) / 2;
-                                const isToday = d.date === todayStr;
-                                const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('az', { weekday: 'narrow' });
-                                return (
-                                  <g key={i}>
-                                    <rect x={x} y={130 - barH} width={barW} height={barH} rx="2"
-                                      fill={isToday ? '#f472b6' : '#c026d3'}
-                                      opacity={d.bpm > 0 ? (isToday ? 1 : 0.65) : 0.2} />
-                                    <text x={i * slotW + slotW / 2} y={148} textAnchor="middle"
-                                      fontSize="8" fill={isToday ? '#f472b6' : 'rgba(255,255,255,0.3)'}>{dayLabel}</text>
-                                  </g>
-                                );
-                              })}
-                            </svg>
-                          );
-                        })()}
+                        <svg viewBox="0 0 183 145" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
+                          {hrBars.map((h, i) => {
+                            const isCurrent = i === currentSlot;
+                            const x = i * (183 / 30) + 1;
+                            return h > 0 ? (
+                              <rect key={i} x={x} y={143 - h} width={Math.max(2, 183/30 - 2)} height={h} rx="1.5"
+                                fill={isCurrent ? '#f472b6' : '#9333ea'}
+                                opacity={i > currentSlot ? 0.15 : isCurrent ? 1 : 0.55} />
+                            ) : null;
+                          })}
+                        </svg>
+                        <div style={timeRow}><span>00:00</span><span>12:00</span><span>23:59</span></div>
                       </div>
-                      {/* Widget 3: Calories — 7-day weekly bars from HealthKit */}
+                      {/* Widget 3: Calories — today's intraday bars */}
                       <div style={{...W, background:'#2d1010'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
                           <div style={iconBox('#4a1515')}><Flame size={12} color="#f97316" /></div>
@@ -546,31 +519,18 @@ const ProgressPage = () => {
                             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 600 kcal burn</div>
                           </div>
                         </div>
-                        {(() => {
-                          const todayStr = new Date().toISOString().split('T')[0];
-                          const maxCal = Math.max(...(weeklyCalories.map(d => d.calories)), 1);
-                          const slotW = 183 / 7;
-                          const barW = Math.floor(slotW * 0.55);
-                          return (
-                            <svg viewBox="0 0 183 165" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
-                              {weeklyCalories.map((d, i) => {
-                                const barH = d.calories > 0 ? Math.max(4, Math.round((d.calories / maxCal) * 120)) : 2;
-                                const x = i * slotW + (slotW - barW) / 2;
-                                const isToday = d.date === todayStr;
-                                const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('az', { weekday: 'narrow' });
-                                return (
-                                  <g key={i}>
-                                    <rect x={x} y={130 - barH} width={barW} height={barH} rx="2"
-                                      fill={isToday ? '#f97316' : '#ea580c'}
-                                      opacity={d.calories > 0 ? (isToday ? 1 : 0.65) : 0.2} />
-                                    <text x={i * slotW + slotW / 2} y={148} textAnchor="middle"
-                                      fontSize="8" fill={isToday ? '#f97316' : 'rgba(255,255,255,0.3)'}>{dayLabel}</text>
-                                  </g>
-                                );
-                              })}
-                            </svg>
-                          );
-                        })()}
+                        <svg viewBox="0 0 183 145" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
+                          {calBars.map((h, i) => {
+                            const isCurrent = i === currentSlot;
+                            const x = i * (183 / 30) + 1;
+                            return (
+                              <rect key={i} x={x} y={143 - h} width={Math.max(2, 183/30 - 2)} height={h} rx="1.5"
+                                fill={isCurrent ? '#f97316' : '#c2410c'}
+                                opacity={i > currentSlot ? 0.15 : isCurrent ? 1 : 0.55} />
+                            );
+                          })}
+                        </svg>
+                        <div style={timeRow}><span>00:00</span><span>12:00</span><span>23:59</span></div>
                       </div>
                       {/* Widget 4: Body Weight */}
                       {(() => {
