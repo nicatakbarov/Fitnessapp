@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Dumbbell, User } from 'lucide-react';
 import { Button } from './ui/button';
 
 const DashboardNav = ({ user, onLogout, activePage }) => {
+  const navigate = useNavigate();
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard', key: 'dashboard' },
     { name: 'My Programs', path: '/my-programs', key: 'my-programs' },
@@ -35,18 +36,15 @@ const DashboardNav = ({ user, onLogout, activePage }) => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-zinc-400">
-            <User className="w-5 h-5" />
-            <span className="hidden sm:inline text-sm">{user?.name}</span>
-          </div>
-          <Button
-            onClick={onLogout}
-            variant="ghost"
-            size="sm"
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors cursor-pointer bg-transparent border-none"
           >
-            <LogOut className="w-5 h-5" />
-          </Button>
+            <div className="w-8 h-8 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center text-green-400 font-bold text-sm" style={{ fontFamily: 'Oswald, sans-serif' }}>
+              {user?.name?.[0]?.toUpperCase() ?? <User className="w-4 h-4" />}
+            </div>
+            <span className="hidden sm:inline text-sm">{user?.name}</span>
+          </button>
         </div>
       </div>
     </nav>
