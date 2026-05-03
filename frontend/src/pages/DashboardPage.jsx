@@ -14,7 +14,7 @@ import { Progress } from '../components/ui/progress';
 import ProgramSelectorModal from '../components/ProgramSelectorModal';
 import DashboardNav from '../components/DashboardNav';
 import { supabase } from '../lib/supabase';
-import { FREE_STARTER_WORKOUTS, HOME_BEGINNER_WORKOUTS } from '../data/programs';
+import { FREE_STARTER_WORKOUTS, HOME_BEGINNER_WORKOUTS, STARTER_WORKOUTS, TWO_DAY_WORKOUTS, ELITE_WORKOUTS, TRANSFORMER_WORKOUTS } from '../data/programs';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -155,8 +155,12 @@ const DashboardPage = () => {
   const workoutData = useMemo(() => {
     if (!activeProgram) return null;
     const pid = activeProgram.program_id;
-    if (pid === 'free-starter') return FREE_STARTER_WORKOUTS;
-    if (pid === 'home-beginner') return HOME_BEGINNER_WORKOUTS;
+    if (pid === 'free-starter')    return FREE_STARTER_WORKOUTS;
+    if (pid === 'home-beginner')   return HOME_BEGINNER_WORKOUTS;
+    if (pid === 'starter')         return STARTER_WORKOUTS;
+    if (pid === 'starter-2day')    return TWO_DAY_WORKOUTS;
+    if (pid === 'elite-beginner')  return ELITE_WORKOUTS;
+    if (pid === 'transformer')     return TRANSFORMER_WORKOUTS;
     if (pid.startsWith('custom-')) return customPlanData;
     return null;
   }, [activeProgram, customPlanData]);

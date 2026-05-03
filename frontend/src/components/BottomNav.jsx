@@ -1,11 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Dumbbell, Bot, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Dumbbell, UtensilsCrossed, BarChart3 } from 'lucide-react';
 
 const tabs = [
-  { label: 'Home',      icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Program',   icon: Dumbbell,         path: '/my-programs' },
-  { label: 'AI Coach',  icon: Bot,              path: '/nutrition' },
-  { label: 'Progress',  icon: BarChart3,         path: '/progress' },
+  { label: 'Home',      icon: LayoutDashboard,   path: '/dashboard' },
+  { label: 'Program',   icon: Dumbbell,           path: '/my-programs' },
+  { label: 'Qida',      icon: UtensilsCrossed,    path: '/calorie' },
+  { label: 'Progress',  icon: BarChart3,           path: '/progress' },
 ];
 
 export default function BottomNav() {
@@ -49,8 +49,8 @@ export default function BottomNav() {
               transition: 'color 0.2s ease',
             }}
           >
-            <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
-            <span style={{ fontSize: '10px', fontWeight: active ? 600 : 400, letterSpacing: '0.02em' }}>
+            <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+            <span style={{ fontSize: '9px', fontWeight: active ? 600 : 400, letterSpacing: '0.01em' }}>
               {label}
             </span>
           </button>

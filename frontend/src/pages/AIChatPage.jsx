@@ -34,16 +34,30 @@ const SUGGESTED_PROMPTS = [
   'Gündəlik neçə protein almalıyam?',
 ];
 
+const INITIAL_MESSAGE = {
+  role: 'assistant',
+  content: 'Salam! Mən FitStart AI məşqçisiyəm 💪\n\nQidalanma, məşq, motivasiya barədə sual ver. Aktiv xüsusi proqramın varsa, məşqləri dəyişdirə, silə və ya əlavə edə bilərəm.',
+};
+
+const chatKey = (userId) => `ai_chat_history_${userId}`;
+
+const loadLocalMessages = (userId) => {
+  if (!userId) return [INITIAL_MESSAGE];
+  try {
+    const raw = localStorage.getItem(chatKey(userId));
+    if (!raw) return [INITIAL_MESSAGE];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [INITIAL_MESSAGE];
+  } catch {
+    return [INITIAL_MESSAGE];
+  }
+};
+
 export default function AIChatPage() {
   const navigate = useNavigate();
   const user = getStoredUser();
 
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: 'Salam! Mən FitStart AI məşqçisiyəm 💪\n\nQidalanma, məşq, motivasiya barədə sual ver. Aktiv xüsusi proqramın varsa, məşqləri dəyişdirə, silə və ya əlavə edə bilərəm.',
-    },
-  ]);
+  const [messages, setMessages] = useState(() => loadLocalMessages(user?.id));
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingMod, setPendingMod] = useState(null);
@@ -64,6 +78,7 @@ export default function AIChatPage() {
   // Auth guard
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
+    loadChatHistory();
     loadProgram();
   }, []);
 
@@ -83,6 +98,43 @@ export default function AIChatPage() {
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   }, [input]);
+
+  const saveToSupabase = async (msgs) => {
+    if (!user) return;
+    try {
+      await supabase.from('ai_chat_history').upsert(
+        { user_id: user.id, messages: msgs, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+    } catch (err) {
+      console.error('AIChatPage: saveToSupabase error', err);
+    }
+  };
+
+  const persistMessages = (msgs) => {
+    if (user?.id) localStorage.setItem(chatKey(user.id), JSON.stringify(msgs));
+    saveToSupabase(msgs);
+  };
+
+  const loadChatHistory = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('ai_chat_history')
+        .select('messages')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error || !data) return; // no history yet, keep local/initial
+      const msgs = Array.isArray(data.messages) && data.messages.length > 0
+        ? data.messages
+        : [INITIAL_MESSAGE];
+      setMessages(msgs);
+      if (user?.id) localStorage.setItem(chatKey(user.id), JSON.stringify(msgs));
+    } catch (err) {
+      console.error('AIChatPage: loadChatHistory error', err);
+    }
+  };
 
   const loadProgram = async () => {
     if (!user) return;
@@ -125,7 +177,10 @@ export default function AIChatPage() {
     if (!msg || loading) return;
 
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: msg }]);
+    const userMsg = { role: 'user', content: msg };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    persistMessages(updatedMessages);
     setLoading(true);
     setPendingMod(null);
 
@@ -139,17 +194,22 @@ export default function AIChatPage() {
 
       if (error) throw new Error(error.message || JSON.stringify(error));
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+      setMessages((prev) => {
+        const next = [...prev, { role: 'assistant', content: data.reply }];
+        persistMessages(next);
+        return next;
+      });
 
       if (data.modification && isCustomPlan) {
         setPendingMod(data.modification);
       }
     } catch (err) {
       console.error('AIChatPage: sendMessage error', err);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `Xəta: ${err.message}` },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev, { role: 'assistant', content: `Xəta: ${err.message}` }];
+        persistMessages(next);
+        return next;
+      });
     } finally {
       setLoading(false);
     }
@@ -190,16 +250,18 @@ export default function AIChatPage() {
 
       setProgram(newPlan);
       setPendingMod(null);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: '✅ Dəyişiklik proqramına uğurla tətbiq edildi!' },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev, { role: 'assistant', content: '✅ Dəyişiklik proqramına uğurla tətbiq edildi!' }];
+        persistMessages(next);
+        return next;
+      });
     } catch (err) {
       console.error('AIChatPage: applyModification error', err);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: '❌ Dəyişikliyi tətbiq etmək mümkün olmadı. Yenidən cəhd edin.' },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev, { role: 'assistant', content: '❌ Dəyişikliyi tətbiq etmək mümkün olmadı. Yenidən cəhd edin.' }];
+        persistMessages(next);
+        return next;
+      });
       setPendingMod(null);
     }
   };
@@ -355,7 +417,7 @@ export default function AIChatPage() {
       </div>
 
       {/* ── Suggested prompts (visible only at start) ── */}
-      {messages.length === 1 && !loading && (
+      {messages.length === 1 && messages[0].role === 'assistant' && !loading && (
         <div style={{
           position: 'fixed',
           bottom: 'calc(64px + env(safe-area-inset-bottom) + 72px)',

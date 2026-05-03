@@ -5,7 +5,7 @@ import { Dumbbell, LogOut, User, ArrowLeft, Flame, Trophy, CheckCircle2, Calenda
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabase';
 import { FREE_STARTER_WORKOUTS, TWO_DAY_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS } from '../data/programs';
-import { getStepsLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
+import { getStepsLast7Days, getCaloriesLast7Days, getHeartRateLast7Days, getWeightHistory, getAppleWatchWorkouts, requestHealthPermissions, getTodaySteps, getTodayCalories, getLatestHeartRate } from '../lib/healthkit';
 import { Capacitor } from '@capacitor/core';
 
 // Light haptic tap — only fires on native iOS, silently skipped on web
@@ -23,6 +23,8 @@ const ProgressPage = () => {
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
   const [weeklySteps, setWeeklySteps] = useState([]);
+  const [weeklyCalories, setWeeklyCalories] = useState([]);
+  const [weeklyHeartRate, setWeeklyHeartRate] = useState([]);
   const [weightData, setWeightData] = useState([]);
   const [watchWorkouts, setWatchWorkouts] = useState([]);
   const [healthData, setHealthData] = useState({ steps: null, calories: null, heartRate: null });
@@ -60,8 +62,10 @@ const ProgressPage = () => {
     isFetching.current = true;
     try {
       await requestHealthPermissions();
-      const [stepsWeekly, weight, workouts, steps, calories, heartRate] = await Promise.all([
+      const [stepsWeekly, calsWeekly, hrWeekly, weight, workouts, steps, calories, heartRate] = await Promise.all([
         getStepsLast7Days(),
+        getCaloriesLast7Days(),
+        getHeartRateLast7Days(),
         getWeightHistory(),
         getAppleWatchWorkouts(),
         getTodaySteps(),
@@ -69,6 +73,8 @@ const ProgressPage = () => {
         getLatestHeartRate(),
       ]);
       setWeeklySteps(stepsWeekly);
+      setWeeklyCalories(calsWeekly);
+      setWeeklyHeartRate(hrWeekly);
       setWeightData(weight);
       setWatchWorkouts(workouts);
       setHealthData({ steps, calories, heartRate });
@@ -385,8 +391,62 @@ const ProgressPage = () => {
 
           {/* Today's Health Widgets — always shown, loads independently */}
           {(() => {
-                const mockDayBars = [6,10,4,12,6,10,17,6,4,10,8,14,12,62,108,145,128,95,46,29,17,10,6,21,10,14,8,10,4,8];
-                const dayBars = mockDayBars;
+                // Günün hazırki saatı (0-24)
+                const hourNow = new Date().getHours() + new Date().getMinutes() / 60;
+                const currentSlot = Math.floor(hourNow * 30 / 24); // 30 bar içindəki slot
+
+                // Günlük aktivlik patterni (30 slot, hər biri ~48 dəq)
+                const DAY_PATTERN = [
+                  1,1,1,1,1,2,   // 0:00–4:48 (gecə)
+                  3,6,9,8,7,8,   // 4:48–9:36 (səhər)
+                  10,9,8,7,8,9,  // 9:36–14:24 (gündüz)
+                  12,13,11,9,7,5, // 14:24–19:12 (axşam piki)
+                  4,3,2,2,1,1,   // 19:12–24:00 (gecə)
+                ];
+
+                // Steps üçün bar-lar — real addım sayına görə ölçüləndirilir
+                const genStepBars = (total) => {
+                  const goal = 10000;
+                  const scale = Math.min(1.4, (total || 0) / goal);
+                  return DAY_PATTERN.map((w, i) => {
+                    if (i > currentSlot) return 2;
+                    if (!total || total === 0) return Math.round(w * 0.3);
+                    return Math.max(4, Math.min(145, Math.round(w * scale * 11)));
+                  });
+                };
+
+                // Calories üçün bar-lar
+                const genCalBars = (total) => {
+                  const goal = 600;
+                  const scale = Math.min(1.4, (total || 0) / goal);
+                  return DAY_PATTERN.map((w, i) => {
+                    if (i > currentSlot) return 2;
+                    if (!total || total === 0) return Math.round(w * 0.3);
+                    return Math.max(4, Math.min(145, Math.round(w * scale * 11)));
+                  });
+                };
+
+                // Heart rate üçün bar-lar — actual BPM ətrafında dalgalanma
+                const genHRBars = (bpm) => {
+                  if (!bpm) return Array(30).fill(0).map((_, i) => i > currentSlot ? 0 : 2);
+                  const restHR = Math.max(45, bpm * 0.72);
+                  const SVG_H = 145;
+                  const MAX_BPM = 200;
+                  return DAY_PATTERN.map((w, i) => {
+                    if (i > currentSlot) return 0;
+                    const hour = (i / 30) * 24;
+                    let est;
+                    if (hour < 6) est = restHR;
+                    else if (hour < 9) est = restHR + (bpm - restHR) * ((hour - 6) / 3);
+                    else if (hour < 20) est = bpm + (w / 13 - 0.8) * (bpm * 0.25);
+                    else est = bpm - (bpm - restHR) * ((hour - 20) / 4);
+                    return Math.max(2, Math.min(SVG_H, Math.round((Math.max(30, est) / MAX_BPM) * SVG_H)));
+                  });
+                };
+
+                const dayBars = genStepBars(healthData.steps);
+                const calBars = genCalBars(healthData.calories);
+                const hrBars  = genHRBars(healthData.heartRate);
                 const W = {borderRadius:'20px',padding:'14px',display:'flex',flexDirection:'column',aspectRatio:'1',overflow:'hidden'};
                 const iconBox = (bg) => ({background:bg,borderRadius:'50%',width:'26px',height:'26px',display:'flex',alignItems:'center',justifyContent:'center'});
                 const timeRow = {display:'flex',justifyContent:'space-between',fontSize:'10px',color:'rgba(255,255,255,0.25)'};
@@ -397,7 +457,7 @@ const ProgressPage = () => {
                       <span className="text-xs text-zinc-600">from Apple Health</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Widget 1: Steps */}
+                      {/* Widget 1: Steps — 7-day weekly bars from HealthKit */}
                       <div style={{...W, background:'#162b1a'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
                           <div style={iconBox('#1f3d25')}><Footprints size={12} color="#4ade80" /></div>
@@ -408,12 +468,34 @@ const ProgressPage = () => {
                             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 10 000 steps</div>
                           </div>
                         </div>
-                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
-                          {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#4ade80" opacity={h>20?1:0.3} />)}
-                        </svg>
-                        <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                        {(() => {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          const maxSteps = Math.max(...(weeklySteps.map(d => d.steps)), 1);
+                          const slotW = 183 / 7;
+                          const barW = Math.floor(slotW * 0.55);
+                          return (
+                            <svg viewBox="0 0 183 165" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
+                              {weeklySteps.map((d, i) => {
+                                const barH = d.steps > 0 ? Math.max(4, Math.round((d.steps / maxSteps) * 120)) : 2;
+                                const x = i * slotW + (slotW - barW) / 2;
+                                const isToday = d.date === todayStr;
+                                const goalMet = d.steps >= 10000;
+                                const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('az', { weekday: 'narrow' });
+                                return (
+                                  <g key={i}>
+                                    <rect x={x} y={130 - barH} width={barW} height={barH} rx="2"
+                                      fill={isToday ? '#4ade80' : goalMet ? '#16a34a' : '#166534'}
+                                      opacity={d.steps > 0 ? (isToday ? 1 : 0.65) : 0.2} />
+                                    <text x={i * slotW + slotW / 2} y={148} textAnchor="middle"
+                                      fontSize="8" fill={isToday ? '#4ade80' : 'rgba(255,255,255,0.3)'}>{dayLabel}</text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          );
+                        })()}
                       </div>
-                      {/* Widget 2: Heart Rate */}
+                      {/* Widget 2: Heart Rate — 7-day weekly bars from HealthKit */}
                       <div style={{...W, background:'#1a0e3a'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
                           <div style={iconBox('#2d1a5e')}><Heart size={12} color="#f472b6" /></div>
@@ -424,12 +506,33 @@ const ProgressPage = () => {
                             <div style={{fontSize:'13px',color:'#f472b6',opacity:0.6,marginTop:'2px'}}>BPM avg</div>
                           </div>
                         </div>
-                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
-                          {[0,0,0,0,29,91,132,87,115,103,132,115,103,140,115,103,132,87,70,41,21,0,0,0,0,0,0,0,0,0].map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#38bdf8" opacity={h>20?0.85:0.2} />)}
-                        </svg>
-                        <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                        {(() => {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          const maxBpm = Math.max(...(weeklyHeartRate.map(d => d.bpm)), 1);
+                          const slotW = 183 / 7;
+                          const barW = Math.floor(slotW * 0.55);
+                          return (
+                            <svg viewBox="0 0 183 165" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
+                              {weeklyHeartRate.map((d, i) => {
+                                const barH = d.bpm > 0 ? Math.max(4, Math.round((d.bpm / maxBpm) * 120)) : 2;
+                                const x = i * slotW + (slotW - barW) / 2;
+                                const isToday = d.date === todayStr;
+                                const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('az', { weekday: 'narrow' });
+                                return (
+                                  <g key={i}>
+                                    <rect x={x} y={130 - barH} width={barW} height={barH} rx="2"
+                                      fill={isToday ? '#f472b6' : '#c026d3'}
+                                      opacity={d.bpm > 0 ? (isToday ? 1 : 0.65) : 0.2} />
+                                    <text x={i * slotW + slotW / 2} y={148} textAnchor="middle"
+                                      fontSize="8" fill={isToday ? '#f472b6' : 'rgba(255,255,255,0.3)'}>{dayLabel}</text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          );
+                        })()}
                       </div>
-                      {/* Widget 3: Calories */}
+                      {/* Widget 3: Calories — 7-day weekly bars from HealthKit */}
                       <div style={{...W, background:'#2d1010'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'4px'}}>
                           <div style={iconBox('#4a1515')}><Flame size={12} color="#f97316" /></div>
@@ -443,10 +546,31 @@ const ProgressPage = () => {
                             <div style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',marginTop:'2px'}}>of 600 kcal burn</div>
                           </div>
                         </div>
-                        <svg viewBox="0 0 183 150" style={{width:'100%',flex:1,minHeight:0,marginBottom:'2px'}} aria-hidden="true">
-                          {dayBars.map((h,i) => <rect key={i} x={i*6+1} y={150-h} width="4" height={Math.max(h,2)} rx="2" fill="#f97316" opacity={h>20?1:0.3} />)}
-                        </svg>
-                        <div style={timeRow}><span>0:00</span><span>12:00</span><span>24:00</span></div>
+                        {(() => {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          const maxCal = Math.max(...(weeklyCalories.map(d => d.calories)), 1);
+                          const slotW = 183 / 7;
+                          const barW = Math.floor(slotW * 0.55);
+                          return (
+                            <svg viewBox="0 0 183 165" style={{width:'100%',flex:1,minHeight:0}} aria-hidden="true">
+                              {weeklyCalories.map((d, i) => {
+                                const barH = d.calories > 0 ? Math.max(4, Math.round((d.calories / maxCal) * 120)) : 2;
+                                const x = i * slotW + (slotW - barW) / 2;
+                                const isToday = d.date === todayStr;
+                                const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('az', { weekday: 'narrow' });
+                                return (
+                                  <g key={i}>
+                                    <rect x={x} y={130 - barH} width={barW} height={barH} rx="2"
+                                      fill={isToday ? '#f97316' : '#ea580c'}
+                                      opacity={d.calories > 0 ? (isToday ? 1 : 0.65) : 0.2} />
+                                    <text x={i * slotW + slotW / 2} y={148} textAnchor="middle"
+                                      fontSize="8" fill={isToday ? '#f97316' : 'rgba(255,255,255,0.3)'}>{dayLabel}</text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          );
+                        })()}
                       </div>
                       {/* Widget 4: Body Weight */}
                       {(() => {
@@ -459,123 +583,63 @@ const ProgressPage = () => {
                             style={{...W, background:'#0e2420', cursor:'pointer', justifyContent:'center', alignItems:'center'}}
                           >
                             {showWeightInput ? (
-                              /* ── Ruler picker mode ── */
                               <div style={{display:'flex',flexDirection:'column',alignItems:'center',
                                 width:'100%',height:'100%',justifyContent:'space-between',gap:'4px'}}
                                 onClick={e => e.stopPropagation()}>
-
-                                {/* Weight value display */}
                                 <div style={{display:'flex',alignItems:'baseline',gap:'3px',marginTop:'4px'}}>
-                                  <span
-                                    style={{
-                                      fontSize:'38px',fontWeight:'800',color:'white',
-                                      letterSpacing:'-1px',display:'inline-block',
-                                      transition:'opacity 0.06s ease-out',
-                                      opacity: 1,
-                                    }}
-                                  >
+                                  <span style={{fontSize:'38px',fontWeight:'800',color:'white',letterSpacing:'-1px',transition:'opacity 0.06s ease-out'}}>
                                     {rulerWeight}
                                   </span>
                                   <span style={{fontSize:'15px',color:'#34d399',fontWeight:'600'}}>kg</span>
                                 </div>
-
-                                {/* Ruler */}
                                 {(() => {
-                                  const PX_PER_KG = 10;
-                                  const ticks = [];
+                                  const PX_PER_KG = 10, ticks = [];
                                   for (let w = 30; w <= 200; w += 0.5) {
                                     const isMajor = Number.isInteger(w) && w % 5 === 0;
                                     const isMinor = Number.isInteger(w) && w % 5 !== 0;
                                     ticks.push({ w, isMajor, isMinor });
                                   }
-                                  const rulerW = (200 - 30) * PX_PER_KG * 2; // total ruler width
+                                  const rulerW = (200 - 30) * PX_PER_KG * 2;
                                   const centerOffset = (rulerWeight - 30) * PX_PER_KG * 2;
                                   return (
-                                    <div style={{position:'relative',width:'100%',height:'52px',
-                                      overflow:'hidden',cursor:'ew-resize',userSelect:'none'}}
-                                      onMouseDown={e => onRulerStart(e.clientX)}
-                                      onMouseMove={e => onRulerMove(e.clientX)}
-                                      onMouseUp={onRulerEnd}
-                                      onMouseLeave={onRulerEnd}
+                                    <div style={{position:'relative',width:'100%',height:'52px',overflow:'hidden',cursor:'ew-resize',userSelect:'none'}}
+                                      onMouseDown={e => onRulerStart(e.clientX)} onMouseMove={e => onRulerMove(e.clientX)}
+                                      onMouseUp={onRulerEnd} onMouseLeave={onRulerEnd}
                                       onTouchStart={e => { e.stopPropagation(); onRulerStart(e.touches[0].clientX); }}
                                       onTouchMove={e => { e.stopPropagation(); onRulerMove(e.touches[0].clientX); }}
-                                      onTouchEnd={onRulerEnd}
-                                    >
-                                      {/* Sliding ruler strip */}
-                                      <div style={{
-                                        position:'absolute',
-                                        top:0,
-                                        left:`calc(50% - ${centerOffset}px)`,
-                                        width:`${rulerW}px`,
-                                        height:'44px',
-                                        display:'flex',
-                                        alignItems:'flex-end',
-                                        pointerEvents:'none',
-                                      }}>
-                                        {ticks.map((t, i) => (
-                                          <div key={i} style={{
-                                            position:'absolute',
-                                            left:`${(t.w - 30) * PX_PER_KG * 2}px`,
-                                            bottom:'8px',
-                                            width: t.isMajor ? '2px' : '1px',
-                                            height: t.isMajor ? '22px' : t.isMinor ? '14px' : '9px',
-                                            background: t.isMajor ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.2)',
-                                            transform:'translateX(-50%)',
-                                          }} />
+                                      onTouchEnd={onRulerEnd}>
+                                      <div style={{position:'absolute',top:0,left:`calc(50% - ${centerOffset}px)`,width:`${rulerW}px`,height:'44px',display:'flex',alignItems:'flex-end',pointerEvents:'none'}}>
+                                        {ticks.map((t,i) => (
+                                          <div key={i} style={{position:'absolute',left:`${(t.w-30)*PX_PER_KG*2}px`,bottom:'8px',
+                                            width:t.isMajor?'2px':'1px',height:t.isMajor?'22px':t.isMinor?'14px':'9px',
+                                            background:t.isMajor?'rgba(52,211,153,0.9)':'rgba(255,255,255,0.2)',transform:'translateX(-50%)'}} />
                                         ))}
-                                        {/* Major tick labels */}
-                                        {ticks.filter(t => t.isMajor).map((t, i) => (
-                                          <div key={i} style={{
-                                            position:'absolute',
-                                            left:`${(t.w - 30) * PX_PER_KG * 2}px`,
-                                            bottom:'0px',
-                                            transform:'translateX(-50%)',
-                                            fontSize:'8px',
-                                            color:'rgba(52,211,153,0.5)',
-                                            fontWeight:'600',
-                                            whiteSpace:'nowrap',
-                                          }}>
-                                            {t.w}
-                                          </div>
+                                        {ticks.filter(t=>t.isMajor).map((t,i) => (
+                                          <div key={i} style={{position:'absolute',left:`${(t.w-30)*PX_PER_KG*2}px`,bottom:'0px',
+                                            transform:'translateX(-50%)',fontSize:'8px',color:'rgba(52,211,153,0.5)',fontWeight:'600',whiteSpace:'nowrap'}}>{t.w}</div>
                                         ))}
                                       </div>
-                                      {/* Center indicator ▼ */}
-                                      <div style={{
-                                        position:'absolute',top:'0',left:'50%',
-                                        transform:'translateX(-50%)',
-                                        width:0,height:0,
-                                        borderLeft:'5px solid transparent',
-                                        borderRight:'5px solid transparent',
-                                        borderTop:'8px solid #34d399',
-                                      }} />
+                                      <div style={{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:0,height:0,
+                                        borderLeft:'5px solid transparent',borderRight:'5px solid transparent',borderTop:'8px solid #34d399'}} />
                                     </div>
                                   );
                                 })()}
-
-                                {/* Save button */}
-                                <button
-                                  onClick={addBodyWeight}
-                                  style={{background:'#34d399',border:'none',borderRadius:'10px',
-                                    padding:'6px 0',width:'100%',color:'#0a2e20',fontWeight:'700',
-                                    fontSize:'12px',cursor:'pointer',flexShrink:0}}
-                                >
+                                <button onClick={addBodyWeight}
+                                  style={{background:'#34d399',border:'none',borderRadius:'10px',padding:'6px 0',
+                                    width:'100%',color:'#0a2e20',fontWeight:'700',fontSize:'12px',cursor:'pointer',flexShrink:0}}>
                                   Saxla
                                 </button>
                               </div>
                             ) : latestBodyWeight === null ? (
-                              /* ── Empty state: big "+" ── */
                               <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px'}}>
-                                <div style={{
-                                  width:'52px',height:'52px',borderRadius:'50%',
+                                <div style={{width:'52px',height:'52px',borderRadius:'50%',
                                   border:'2px solid rgba(52,211,153,0.35)',
-                                  display:'flex',alignItems:'center',justifyContent:'center',
-                                }}>
+                                  display:'flex',alignItems:'center',justifyContent:'center'}}>
                                   <span style={{fontSize:'28px',color:'rgba(52,211,153,0.6)',lineHeight:1,marginTop:'-2px'}}>+</span>
                                 </div>
                                 <span style={{fontSize:'11px',color:'rgba(255,255,255,0.25)',letterSpacing:'0.05em'}}>çəki əlavə et</span>
                               </div>
                             ) : (
-                              /* ── Has data: minimal weight display ── */
                               <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'4px'}}>
                                 <div style={{display:'flex',alignItems:'baseline',gap:'4px'}}>
                                   <span style={{fontSize:'48px',fontWeight:'800',color:'white',lineHeight:1,letterSpacing:'-1px'}}>
@@ -767,58 +831,102 @@ const ProgressPage = () => {
               {/* Weight Trend */}
               <section>
                   <h2 className="font-heading text-lg font-bold text-white uppercase mb-4 flex items-center gap-2">
-                    <Scale className="w-5 h-5 text-cyan-400" /> Çəki Trendi
+                    <TrendingUp className="w-5 h-5 text-sky-400" /> Çəki Trendi
                   </h2>
                   <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
                   {bodyWeightHistory.length === 0 ? (
                     <p className="text-zinc-500 text-sm text-center py-4">Hələ çəki məlumatı yoxdur. Yuxarıdakı widget ilə əlavə et.</p>
                   ) : (
                     <>{(() => {
-                      const last12 = bodyWeightHistory.slice(-12);
+                      const last12 = bodyWeightHistory.slice(-20);
                       const minW = Math.min(...last12.map(d => d.weight));
                       const maxW = Math.max(...last12.map(d => d.weight));
-                      const range = maxW - minW || 0.1;
+                      const range = maxW - minW || 0.5;
                       const latest = last12[last12.length - 1];
-                      const first = last12[0];
-                      const diff = (latest.weight - first.weight).toFixed(1);
-                      const BAR_MAX_H = 60;
+                      const first  = last12[0];
+                      const diff   = (latest.weight - first.weight).toFixed(1);
+
+                      const VW2 = 320, VH2 = 140;
+                      const PL = 8, PR = 44, PT = 16, PB = 24;
+                      const CW = VW2 - PL - PR, CH = VH2 - PT - PB;
+                      const toX2 = (i) => PL + (last12.length === 1 ? CW/2 : (i / (last12.length-1)) * CW);
+                      const toY2 = (w) => PT + CH - ((w - minW) / range) * CH;
+                      const coords2 = last12.map((d,i) => ({ x: toX2(i), y: toY2(d.weight), d }));
+
+                      const pathD2 = coords2.reduce((acc, p, i) => {
+                        if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+                        const prev = coords2[i-1];
+                        const cpx = ((prev.x + p.x) / 2).toFixed(1);
+                        return `${acc} C ${cpx} ${prev.y.toFixed(1)} ${cpx} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+                      }, '');
+                      const areaD2 = `${pathD2} L ${coords2[coords2.length-1].x.toFixed(1)} ${PT+CH} L ${PL} ${PT+CH} Z`;
+                      const dot2 = coords2[coords2.length-1];
+
+                      // Y labels: 4 ticks
+                      const yStep = range / 3;
+                      const yTicks = [0,1,2,3].map(i => ({
+                        val: (minW + yStep * i).toFixed(1),
+                        y: toY2(minW + yStep * i),
+                      }));
+
+                      // X labels: first, middle, last
+                      const xLabels = [0, Math.floor((last12.length-1)/2), last12.length-1]
+                        .filter((v,i,a) => a.indexOf(v) === i)
+                        .map(i => ({
+                          label: new Date(last12[i].date).toLocaleDateString('az', { month: 'short', day: 'numeric' }),
+                          x: toX2(i),
+                        }));
+
                       return (
                         <>
-                          <div className="flex items-end gap-1 mb-3">
-                            {last12.map((d, i) => {
-                              const barH = Math.max(6, ((d.weight - minW) / range) * (BAR_MAX_H - 6) + 6);
-                              const isLatest = i === last12.length - 1;
-                              return (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                  {isLatest && (
-                                    <span className="text-[9px] text-cyan-400 font-bold">{d.weight}</span>
-                                  )}
-                                  <div className="w-full flex items-end" style={{ height: `${BAR_MAX_H}px` }}>
-                                    <div
-                                      className={`w-full rounded-t-sm ${isLatest ? 'bg-cyan-400' : 'bg-cyan-800/60'}`}
-                                      style={{ height: `${barH}px` }}
-                                    />
-                                  </div>
-                                  {isLatest && (
-                                    <span className="text-[9px] text-zinc-600">
-                                      {new Date(d.date).toLocaleDateString('az', { month: 'short', day: 'numeric' })}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
-                            <span className="text-2xl font-bold text-white">{latest.weight} kg</span>
-                            <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
-                              +diff < 0 ? 'bg-green-500/15 text-green-400'
-                              : +diff > 0 ? 'bg-red-500/15 text-red-400'
-                              : 'bg-zinc-800 text-zinc-400'
-                            }`}>
+                          <svg viewBox={`0 0 ${VW2} ${VH2}`} style={{width:'100%',overflow:'visible',marginBottom:'12px'}} preserveAspectRatio="xMidYMid meet">
+                            <defs>
+                              <linearGradient id="wGrad2" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.28"/>
+                                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.02"/>
+                              </linearGradient>
+                            </defs>
+                            {/* Grid lines */}
+                            {yTicks.map((t,i) => (
+                              <line key={i} x1={PL} y1={t.y} x2={PL+CW} y2={t.y}
+                                stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
+                            ))}
+                            {/* Y labels */}
+                            {yTicks.map((t,i) => (
+                              <text key={i} x={VW2-2} y={t.y+3} textAnchor="end"
+                                fontSize="8.5" fill="rgba(255,255,255,0.3)" fontFamily="system-ui">{t.val}</text>
+                            ))}
+                            {/* Area */}
+                            <path d={areaD2} fill="url(#wGrad2)"/>
+                            {/* Line */}
+                            <path d={pathD2} fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            {/* Vertical indicator at latest point */}
+                            <line x1={dot2.x} y1={dot2.y+6} x2={dot2.x} y2={PT+CH}
+                              stroke="rgba(56,189,248,0.4)" strokeWidth="1" strokeDasharray="3,2"/>
+                            {/* Dot */}
+                            <circle cx={dot2.x} cy={dot2.y} r="6" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" strokeWidth="2"/>
+                            <circle cx={dot2.x} cy={dot2.y} r="3" fill="white"/>
+                            {/* Latest value label above dot */}
+                            <text x={dot2.x} y={dot2.y - 10} textAnchor="middle"
+                              fontSize="9" fill="#38bdf8" fontWeight="700" fontFamily="system-ui">{latest.weight}</text>
+                            {/* X labels */}
+                            {xLabels.map((l,i) => (
+                              <text key={i} x={l.x} y={PT+CH+14} textAnchor="middle"
+                                fontSize="8" fill="rgba(255,255,255,0.25)" fontFamily="system-ui">{l.label}</text>
+                            ))}
+                          </svg>
+
+                          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                            paddingTop:'12px',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+                            <span style={{fontSize:'22px',fontWeight:'800',color:'white'}}>{latest.weight} kg</span>
+                            <span style={{fontSize:'13px',fontWeight:'600',padding:'3px 10px',borderRadius:'20px',
+                              background: +diff < 0 ? 'rgba(34,197,94,0.12)' : +diff > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(113,113,122,0.2)',
+                              color: +diff < 0 ? '#4ade80' : +diff > 0 ? '#f87171' : '#a1a1aa',
+                            }}>
                               {+diff > 0 ? '+' : ''}{diff} kg
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-600 mt-1">
+                          <p style={{fontSize:'11px',color:'rgba(255,255,255,0.2)',marginTop:'4px'}}>
                             {last12.length} ölçüm · son {last12.length > 1
                               ? Math.round((new Date(latest.date) - new Date(first.date)) / 86400000) + ' gün'
                               : 'ölçüm'}

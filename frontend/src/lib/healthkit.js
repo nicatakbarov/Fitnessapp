@@ -142,6 +142,62 @@ export const getStepsLast7Days = async () => {
   }
 };
 
+export const getCaloriesLast7Days = async () => {
+  await initPlugin();
+  const plugin = getPlugin();
+  if (!plugin) return [];
+  try {
+    const end = new Date();
+    const start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+    const res = await plugin.queryHKitSampleType({
+      sampleName: 'activeEnergyBurned',
+      startDate: start.toISOString(), endDate: end.toISOString(), limit: 0,
+    });
+    const days = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      days[d.toISOString().split('T')[0]] = 0;
+    }
+    for (const r of (res.resultData || [])) {
+      const key = new Date(r.startDate).toISOString().split('T')[0];
+      if (key in days) days[key] += r.value || 0;
+    }
+    return Object.entries(days).map(([date, calories]) => ({ date, calories: Math.round(calories) }));
+  } catch (e) {
+    console.error('[HealthKit] weekly calories error:', e.message || String(e));
+    return [];
+  }
+};
+
+export const getHeartRateLast7Days = async () => {
+  await initPlugin();
+  const plugin = getPlugin();
+  if (!plugin) return [];
+  try {
+    const end = new Date();
+    const start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+    const res = await plugin.queryHKitSampleType({
+      sampleName: 'heartRate',
+      startDate: start.toISOString(), endDate: end.toISOString(), limit: 0,
+    });
+    const days = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      days[d.toISOString().split('T')[0]] = { sum: 0, count: 0 };
+    }
+    for (const r of (res.resultData || [])) {
+      const key = new Date(r.startDate).toISOString().split('T')[0];
+      if (key in days) { days[key].sum += r.value || 0; days[key].count += 1; }
+    }
+    return Object.entries(days).map(([date, v]) => ({
+      date, bpm: v.count > 0 ? Math.round(v.sum / v.count) : 0,
+    }));
+  } catch (e) {
+    console.error('[HealthKit] weekly heartRate error:', e.message || String(e));
+    return [];
+  }
+};
+
 export const getSleepLast7Days = async () => {
   await initPlugin();
   const plugin = getPlugin();

@@ -15,6 +15,8 @@ import BrowseProgramsPage from "./pages/BrowseProgramsPage";
 import CreateCustomPlanPage from "./pages/CreateCustomPlanPage";
 import HomeSetupPage from "./pages/HomeSetupPage";
 import GeneratingPage from "./pages/GeneratingPage";
+import PersonalPlanPage from "./pages/PersonalPlanPage";
+import CaloriePage from "./pages/CaloriePage";
 
 // "/" route-unda: ilk açılışda onboarding, sonra landing page
 const RootRedirect = () => {
@@ -45,6 +47,8 @@ function App() {
             <Route path="/create-plan" element={<CreateCustomPlanPage />} />
             <Route path="/home-setup" element={<HomeSetupPage />} />
             <Route path="/generating" element={<GeneratingPage />} />
+            <Route path="/personal-plan" element={<PersonalPlanPage />} />
+            <Route path="/calorie" element={<CaloriePage />} />
           </Routes>
         </BrowserRouter>
       </div>

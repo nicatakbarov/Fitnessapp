@@ -25,14 +25,31 @@ const STORAGE_KEY = 'pendingGeneratedPlan';
 
 function buildPrompt(planConfig) {
   const goalLabel = GOAL_LABELS[planConfig.goal] || planConfig.goal;
-  const muscles = (planConfig.muscles || []).join(', ');
+  const muscles   = (planConfig.muscles || []).join(', ');
+  const isHome    = planConfig.planType === 'home';
+
+  let equipmentNote;
+  if (isHome) {
+    const savedEquipment = (() => {
+      try { return JSON.parse(localStorage.getItem('fitstart_home_equipment') || '[]'); } catch { return []; }
+    })();
+    const equipList = savedEquipment.length > 0
+      ? savedEquipment.join(', ')
+      : 'bodyweight';
+    equipmentNote = `Avadanlıq: istifadəçinin evdə olan avadanlıqlar: ${equipList}. Yalnız bu avadanlıqlarla edilə bilən məşqlər seç. Gym aparatları istifadə etmə.`;
+  } else {
+    equipmentNote = 'Avadanlıq: barbell, dumbbell, gym maşınları, kabel maşınları — bütün gym avadanlıqları istifadə edilə bilər.';
+  }
+
+  const planLabel = isHome ? 'Evdə Məşq' : 'Zalda Məşq';
 
   return `Sən FitStart fitness proqram generatorusan. Aşağıdakı parametrlərə əsasən JSON formatında məşq proqramı yarat:
 
+Plan növü: ${planLabel}
 Məqsəd: ${goalLabel}
 Hədəf əzələlər: ${muscles}
 Həftədə: ${planConfig.daysPerWeek} gün
-Məşq müddəti: ${planConfig.minutesPerWorkout} dəqiqə
+${equipmentNote}
 
 CAVABINI YALNIZ JSON formatında ver, heç bir əlavə mətn olmadan. JSON strukturu:
 {
@@ -138,6 +155,7 @@ const GeneratingPage = () => {
 
       // Clean up localStorage
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('fitstart_home_equipment');
 
       // Show final step
       setCurrentStep(STEPS.length - 1);
@@ -160,6 +178,18 @@ const GeneratingPage = () => {
     if (!user) { navigate('/login'); return; }
 
     setError('');
+
+    // Ensure Supabase session is active
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        localStorage.removeItem('user');
+        navigate('/login');
+        return;
+      }
+    }
+
     startStepAnimation();
 
     try {

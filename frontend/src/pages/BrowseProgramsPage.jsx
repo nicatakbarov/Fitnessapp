@@ -1,67 +1,129 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, CheckCircle, Loader2 } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { Dumbbell, LogOut, User, CheckCircle, Loader2, Home, Building2, Star, ArrowRight } from 'lucide-react';
 import { supabase, getStoredUser } from '../lib/supabase';
 
 const GYM_PLANS = [
   {
     id: 'starter-2day',
     days: 2,
-    label: '2x per week',
-    name: '2-Day Gym Starter',
-    description: 'Upper/Lower split · 4 weeks · Machine-friendly',
-    details: ['Great if you\'re just starting out', 'Upper body Monday, Lower body Friday', 'Machine-based — no technique overwhelm', '4-week progressive plan'],
+    name: 'Gym Başlanğıc 2 Gün',
+    description: 'Üst/Alt bölgü · 4 həftə · Maşın əsaslı',
+    details: [
+      'Yeni başlayanlar üçün ideal',
+      'Bazar ertəsi üst, cümə alt bədən',
+      'Maşın əsaslı — texnika problemsiz',
+      '4 həftəlik proqressiv plan',
+    ],
     recommended: false,
   },
   {
     id: 'starter',
     days: 3,
-    label: '3x per week',
     name: 'Gym Starter',
-    description: 'Push/Pull/Legs · 4 weeks · Progressive overload',
-    details: ['Most popular for beginners', 'Push / Pull / Legs split', 'Built-in weight progression each week', '4-week structured program'],
+    description: 'Push/Pull/Legs · 4 həftə · Proqressiv yük',
+    details: [
+      'Yeni başlayanlar arasında ən populyar',
+      'Push / Pull / Legs bölgüsü',
+      'Həftəlik çəki proqressiyası',
+      '4 həftəlik strukturlu proqram',
+    ],
     recommended: true,
   },
   {
     id: 'elite-beginner',
     days: 5,
-    label: '5x per week',
-    name: 'Elite Beginner',
-    description: 'Push/Pull/Legs/Shoulders/Full · 9 weeks · 3-phase',
-    details: ['Best if you can commit to 5 days', '5-day split for full body coverage', '3-phase progression over 9 weeks', 'Serious results for dedicated beginners'],
+    name: 'Elite Başlanğıc',
+    description: 'PPL/Çiyn/Tam · 9 həftə · 3 mərhələ',
+    details: [
+      '5 günə həsr edə biləcəklər üçün',
+      '5 günlük tam bədən bölgüsü',
+      '9 həftə 3 mərhələli proqressiya',
+      'Ciddi nəticə istəyənlər üçün',
+    ],
     recommended: false,
   },
 ];
 
-const BrowseProgramsPage = () => {
+const PLAN_TYPES = [
+  {
+    id: 'home',
+    emoji: '🏠',
+    title: 'Evdə Məşq',
+    duration: '4–8 həftə',
+    frequency: '3–5x/həftə',
+    level: 'Başlanğıc',
+    popular: false,
+    features: [
+      'Öz avadanlıqların ilə',
+      'Bodyweight məşqlər',
+      'AI ilə fərdi plan',
+      'İstənilən yerdə məşq et',
+    ],
+    cta: 'Plan Yarat',
+  },
+  {
+    id: 'gym',
+    emoji: '🏋️',
+    title: 'Zalda Məşq',
+    duration: '4–9 həftə',
+    frequency: '2–5x/həftə',
+    level: 'Hər səviyyə',
+    popular: true,
+    features: [
+      'Barbell, dumbbell, maşınlar',
+      'Proqressiv yük artımı',
+      'AI ilə fərdi plan',
+      'Push / Pull / Legs bölgüsü',
+    ],
+    cta: 'Plan Yarat',
+  },
+  {
+    id: 'personal',
+    emoji: '⭐',
+    title: 'Şəxsi Plan',
+    duration: 'Öz müddətin',
+    frequency: 'Öz cədvəlin',
+    level: 'Sənin seçimin',
+    popular: false,
+    features: [
+      'Özün hərəkətləri seç',
+      'Öz dəst/təkrar sayın',
+      'Tam azadlıq',
+      'İstədiyin kimi qur',
+    ],
+    cta: 'Planı Qur',
+  },
+];
+
+export default function BrowseProgramsPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [selected, setSelected] = useState('starter');
-  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState('types');        // 'types' | 'gym'
+  const [selectedId, setSelectedId] = useState('starter');
   const [ownedPrograms, setOwnedPrograms] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [enrollError, setEnrollError] = useState('');
 
   useEffect(() => {
-    const parsedUser = getStoredUser();
-    if (!parsedUser) { navigate('/login'); return; }
-    try {
-      setUser(parsedUser);
-      supabase.from('purchases').select('program_id').eq('user_id', parsedUser.id).then(({ data }) => {
-        setOwnedPrograms((data || []).map(p => p.program_id));
-      });
-    } catch {
-      navigate('/login');
-    }
+    const u = getStoredUser();
+    if (!u) { navigate('/login'); return; }
+    setUser(u);
+    supabase
+      .from('purchases')
+      .select('program_id')
+      .eq('user_id', u.id)
+      .then(({ data }) => setOwnedPrograms((data || []).map(p => p.program_id)));
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/');
+  const handleTypeSelect = (typeId) => {
+    if (typeId === 'home')     return navigate('/home-setup');
+    if (typeId === 'gym')      return navigate('/create-plan', { state: { planType: 'gym'  } });
+    if (typeId === 'personal') return navigate('/personal-plan');
   };
 
   const handleEnroll = async () => {
-    const plan = GYM_PLANS.find(p => p.id === selected);
+    const plan = GYM_PLANS.find(p => p.id === selectedId);
     if (!plan || !user) return;
 
     if (ownedPrograms.includes(plan.id)) {
@@ -70,7 +132,20 @@ const BrowseProgramsPage = () => {
     }
 
     setLoading(true);
+    setEnrollError('');
     try {
+      // Ensure Supabase session is active
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        // Try refresh
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          localStorage.removeItem('user');
+          navigate('/login');
+          return;
+        }
+      }
+
       const { error } = await supabase.from('purchases').insert({
         user_id: user.id,
         program_id: plan.id,
@@ -81,7 +156,11 @@ const BrowseProgramsPage = () => {
       if (error) throw error;
       navigate('/dashboard');
     } catch (err) {
-      alert('Failed to enroll. Please try again.');
+      console.error('Enroll error:', err);
+      const msg = err?.message || err?.details || 'Xəta baş verdi';
+      setEnrollError(msg.includes('row-level') || msg.includes('auth')
+        ? 'Sessiya bitib. Yenidən daxil olun.'
+        : msg);
     } finally {
       setLoading(false);
     }
@@ -89,118 +168,287 @@ const BrowseProgramsPage = () => {
 
   if (!user) return null;
 
-  const selectedPlan = GYM_PLANS.find(p => p.id === selected);
-  const isOwned = ownedPrograms.includes(selected);
+  const selectedPlan = GYM_PLANS.find(p => p.id === selectedId);
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f]" data-testid="browse-programs-page">
+    <div style={{
+      minHeight: '100vh',
+      background: '#0f0f0f',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif',
+    }}>
       {/* Navbar */}
-      <nav className="safe-nav fixed top-0 left-0 right-0 z-50 glass">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
-            <Dumbbell className="w-8 h-8 text-green-500" />
-            <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-6">
-            <Link to="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white">Dashboard</Link>
-            <Link to="/my-programs" className="text-sm font-medium text-zinc-400 hover:text-white">My Programs</Link>
-            <Link to="/progress" className="text-sm font-medium text-zinc-400 hover:text-white">Progress</Link>
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+        background: 'rgba(15,15,15,0.95)', backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: '0 20px', height: 60,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+          <Dumbbell size={26} color="#22c55e" />
+          <span style={{ color: 'white', fontWeight: 800, fontSize: 18 }}>FitStart</span>
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#71717a' }}>
+            <User size={16} />
+            <span style={{ fontSize: 13 }}>{user.name}</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-zinc-400">
-              <User className="w-5 h-5" />
-              <span className="hidden sm:inline text-sm">{user.name}</span>
-            </div>
-            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-zinc-800">
-              <LogOut className="w-5 h-5" />
-            </Button>
-          </div>
+          <button
+            onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', padding: 6 }}
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </nav>
 
-      <main className="pt-24 pb-16 px-4 md:px-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-10">
-            <h1 className="font-heading text-3xl md:text-4xl font-bold text-white uppercase mb-2">
-              Gym Plan
-            </h1>
-            <p className="text-zinc-400">How many days per week can you train?</p>
-          </div>
+      <main style={{ paddingTop: 76, paddingBottom: 40, padding: '76px 20px 40px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
-          {/* Frequency picker */}
-          <div className="space-y-3 mb-8">
-            {GYM_PLANS.map(plan => (
-              <button
-                key={plan.id}
-                onClick={() => setSelected(plan.id)}
-                className={`w-full flex items-center justify-between px-5 py-4 rounded-xl border-2 transition-all text-left ${
-                  selected === plan.id
-                    ? 'bg-green-500/10 border-green-500'
-                    : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-600'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-3 mb-0.5">
-                    <span className={`font-heading text-2xl font-bold ${selected === plan.id ? 'text-green-400' : 'text-white'}`}>
-                      {plan.days}x
-                    </span>
-                    <span className={`text-sm font-medium ${selected === plan.id ? 'text-green-400' : 'text-zinc-300'}`}>
-                      per week
-                      {plan.recommended && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                          Recommended
-                        </span>
-                      )}
-                      {ownedPrograms.includes(plan.id) && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-zinc-700 text-zinc-300 border border-zinc-600">
-                          Enrolled
-                        </span>
-                      )}
-                    </span>
+          {/* ── Plan növü seçimi ── */}
+          {view === 'types' && (
+            <>
+              {/* Header */}
+              <div style={{ padding: '8px 4px 24px' }}>
+                <div style={{ color: '#71717a', fontSize: 12, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Yolunu seç
+                </div>
+                <div style={{ fontFamily: 'Oswald, sans-serif', fontWeight: 700, fontSize: 28, textTransform: 'uppercase', color: 'white', lineHeight: 1.05 }}>
+                  Plan Növü
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {PLAN_TYPES.map(type => (
+                  <div
+                    key={type.id}
+                    style={{
+                      background: '#18181b',
+                      border: type.popular ? '1px solid #22c55e' : '1px solid #27272a',
+                      borderRadius: 24,
+                      padding: 20,
+                      boxShadow: type.popular ? '0 0 30px -10px rgba(34,197,94,0.30)' : 'none',
+                    }}
+                  >
+                    {/* Popular badge */}
+                    {type.popular && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        background: '#16a34a', borderRadius: 9999,
+                        padding: '5px 10px', marginBottom: 14,
+                      }}>
+                        <Star size={10} color="#fff" fill="#fff" />
+                        <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>ƏN POPULYAR</span>
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{
+                        fontFamily: 'Oswald, sans-serif', fontWeight: 700,
+                        fontSize: 20, textTransform: 'uppercase', color: 'white', lineHeight: 1.1,
+                      }}>
+                        {type.title}
+                      </div>
+                    </div>
+
+                    {/* Meta row */}
+                    <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
+                      {[['Müddət', type.duration], ['Tezlik', type.frequency], ['Səviyyə', type.level]].map(([k, v]) => (
+                        <div key={k} style={{ flex: 1 }}>
+                          <div style={{ color: '#71717a', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{k}</div>
+                          <div style={{ color: '#d4d4d8', fontSize: 11, fontWeight: 500 }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Features */}
+                    <div style={{ marginBottom: 16 }}>
+                      {type.features.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', color: '#a1a1aa', fontSize: 13 }}>
+                          <CheckCircle size={13} color="#22c55e" style={{ flexShrink: 0 }} />
+                          {f}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* CTA button */}
+                    <button
+                      onClick={() => handleTypeSelect(type.id)}
+                      style={{
+                        width: '100%', height: 50, borderRadius: 9999, border: 0,
+                        cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                        fontFamily: 'inherit',
+                        background: type.popular ? '#16a34a' : '#27272a',
+                        color: '#fff',
+                        boxShadow: type.popular ? '0 8px 16px rgba(20,83,45,0.30)' : 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        transition: 'background 0.2s',
+                      }}
+                    >
+                      {type.cta} <ArrowRight size={16} />
+                    </button>
                   </div>
-                  <p className="text-xs text-zinc-500">{plan.description}</p>
-                </div>
-                <div className={`w-6 h-6 rounded-full flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
-                  selected === plan.id ? 'border-green-500 bg-green-500' : 'border-zinc-600'
-                }`}>
-                  {selected === plan.id && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Plan details */}
-          {selectedPlan && (
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mb-6">
-              <h3 className="font-heading text-lg font-bold text-white uppercase mb-3">{selectedPlan.name}</h3>
-              <ul className="space-y-2">
-                {selectedPlan.details.map((d, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    {d}
-                  </li>
                 ))}
-              </ul>
-            </div>
+              </div>
+            </>
           )}
 
-          <Button
-            onClick={handleEnroll}
-            disabled={loading}
-            className="w-full py-6 rounded-full bg-green-600 hover:bg-green-700 text-white font-bold text-base disabled:opacity-50"
-          >
-            {loading ? (
-              <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Starting your program...</>
-            ) : isOwned ? (
-              'View My Programs'
-            ) : (
-              `Start ${selectedPlan?.days}x/week Program`
-            )}
-          </Button>
+          {/* ── Gym plan tezlik seçimi ── */}
+          {view === 'gym' && (
+            <>
+              <button
+                onClick={() => setView('types')}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#71717a', fontSize: 13, marginBottom: 20,
+                  display: 'flex', alignItems: 'center', gap: 6, padding: 0,
+                }}
+              >
+                ← Geri
+              </button>
+
+              <div style={{ marginBottom: 22 }}>
+                <h1 style={{ color: 'white', fontSize: 22, fontWeight: 800, marginBottom: 5 }}>
+                  🏋️ Zalda Məşq
+                </h1>
+                <p style={{ color: '#71717a', fontSize: 13 }}>
+                  Həftədə neçə gün məşq edə bilərsən?
+                </p>
+              </div>
+
+              {/* Tezlik kartları */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
+                {GYM_PLANS.map(plan => (
+                  <button
+                    key={plan.id}
+                    onClick={() => setSelectedId(plan.id)}
+                    style={{
+                      width: '100%',
+                      background: selectedId === plan.id ? 'rgba(34,197,94,0.08)' : 'rgba(39,39,42,0.6)',
+                      border: `2px solid ${selectedId === plan.id ? '#22c55e' : '#27272a'}`,
+                      borderRadius: 14,
+                      padding: '14px 18px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
+                        <span style={{
+                          color: selectedId === plan.id ? '#22c55e' : 'white',
+                          fontWeight: 800, fontSize: 22,
+                        }}>
+                          {plan.days}x
+                        </span>
+                        <span style={{
+                          color: selectedId === plan.id ? '#22c55e' : '#a1a1aa',
+                          fontSize: 13, fontWeight: 500,
+                        }}>
+                          həftədə
+                        </span>
+                        {plan.recommended && (
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                            background: 'rgba(34,197,94,0.15)', color: '#22c55e',
+                            border: '1px solid rgba(34,197,94,0.3)',
+                          }}>
+                            Tövsiyə edilir
+                          </span>
+                        )}
+                        {ownedPrograms.includes(plan.id) && (
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 20, fontSize: 11,
+                            background: '#27272a', color: '#a1a1aa', border: '1px solid #3f3f46',
+                          }}>
+                            Qeydiyyatlı
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ color: '#71717a', fontSize: 11 }}>{plan.description}</p>
+                    </div>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${selectedId === plan.id ? '#22c55e' : '#3f3f46'}`,
+                      background: selectedId === plan.id ? '#22c55e' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {selectedId === plan.id && (
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#000' }} />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Plan detalları */}
+              {selectedPlan && (
+                <div style={{
+                  background: 'rgba(39,39,42,0.5)',
+                  border: '1px solid #27272a',
+                  borderRadius: 14,
+                  padding: '14px 16px',
+                  marginBottom: 18,
+                }}>
+                  <p style={{ color: 'white', fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+                    {selectedPlan.name}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {selectedPlan.details.map((d, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <CheckCircle size={13} color="#22c55e" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#d4d4d8', fontSize: 13 }}>{d}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {enrollError && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: 10, padding: '10px 14px', color: '#f87171', fontSize: 13,
+                  marginBottom: 8, textAlign: 'center',
+                }}>
+                  {enrollError}
+                </div>
+              )}
+
+              <button
+                onClick={handleEnroll}
+                disabled={loading}
+                style={{
+                  width: '100%', padding: '15px',
+                  borderRadius: 50,
+                  background: loading ? '#27272a' : '#22c55e',
+                  color: loading ? '#71717a' : '#000',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontWeight: 700, fontSize: 15,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {loading ? (
+                  <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Qeydiyyat olunur...</>
+                ) : ownedPrograms.includes(selectedId) ? (
+                  'Dashboard-a get'
+                ) : (
+                  `${selectedPlan?.days}x/həftə Proqramı Başlat`
+                )}
+              </button>
+            </>
+          )}
         </div>
       </main>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
-};
-
-export default BrowseProgramsPage;
+}
