@@ -54,9 +54,9 @@ ${equipmentNote}
 CAVABINI YALNIZ JSON formatında ver, heç bir əlavə mətn olmadan. JSON strukturu:
 {
   "name": "Plan adı",
-  "weeks": [{ "week": 1, "days": [{ "dayNumber": 1, "dayName": "Monday", "title": "Push Day", "warmup": { "duration": "5 min", "exercises": [{"name": "..."}] }, "mainWorkout": [{ "name": "...", "sets": 3, "reps": "12", "rest": "60 sec", "equipment": "barbell" }], "cooldown": { "duration": "5 min", "exercises": [{"name": "..."}] } }] }]
+  "week": { "days": [{ "dayNumber": 1, "dayName": "Monday", "title": "Push Day", "warmup": { "duration": "5 min", "exercises": [{"name": "..."}] }, "mainWorkout": [{ "name": "...", "sets": 3, "reps": "12", "rest": "60 sec", "equipment": "barbell" }], "cooldown": { "duration": "5 min", "exercises": [{"name": "..."}] } }] }
 }
-4 həftəlik proqram yarat. Hər həftə ${planConfig.daysPerWeek} gün olmalıdır. Hər həftə eyni şablonu istifadə et.`;
+YALNIZ 1 həftəlik şablon yarat (${planConfig.daysPerWeek} gün). Tətbiq onu 4 həftəyə özü çoxaldacaq. Hər gün üçün fərqli məşqlər seç.`;
 }
 
 function extractJSON(text) {
@@ -90,17 +90,22 @@ const GeneratingPage = () => {
 
   const startStepAnimation = useCallback(() => {
     if (stepInterval.current) return;
-    stepInterval.current = setInterval(() => {
+    // First 6 steps at normal speed, then slow loop on last 2 steps while AI works
+    const SLOW_LOOP_FROM = STEPS.length - 3; // step index 5
+    let slow = false;
+    const tick = () => {
       setCurrentStep(prev => {
-        // Stop at second-to-last step; the final step is set when generation completes
         if (prev >= STEPS.length - 2) {
-          clearInterval(stepInterval.current);
-          stepInterval.current = null;
-          return prev;
+          // AI still working — loop back to keep animation alive
+          slow = true;
+          return SLOW_LOOP_FROM;
         }
         return prev + 1;
       });
-    }, 1800);
+      // Slow down once looping
+      stepInterval.current = setTimeout(tick, slow ? 3200 : 1800);
+    };
+    stepInterval.current = setTimeout(tick, 1800);
   }, []);
 
   const savePlanAndNavigate = useCallback(async (planData) => {
@@ -108,10 +113,20 @@ const GeneratingPage = () => {
     if (!user) { navigate('/login'); return; }
 
     try {
+      // Support both single-week format { week: {...} } and multi-week { weeks: [...] }
+      let weeksArray = planData.weeks;
+      if (!weeksArray && planData.week) {
+        // AI returned 1-week template — expand to 4 weeks
+        weeksArray = [1, 2, 3, 4].map(w => ({ week: w, days: planData.week.days }));
+      }
+      if (!weeksArray || !Array.isArray(weeksArray)) {
+        throw new Error('AI cavabında düzgün plan strukturu tapılmadı');
+      }
+
       const planJson = {
         id: `custom-${Date.now()}`,
         name: planData.name || programName,
-        weeks: planData.weeks.map((week, wi) => ({
+        weeks: weeksArray.map((week, wi) => ({
           week: week.week || wi + 1,
           days: week.days.map(day => ({
             id: `custom-w${week.week || wi + 1}-d${day.dayNumber}`,
@@ -131,8 +146,8 @@ const GeneratingPage = () => {
           user_id: user.id,
           name: planData.name || programName,
           description: `AI tərəfindən yaradılmış ${GOAL_LABELS[planConfig?.goal] || ''} proqramı`,
-          weeks_count: planData.weeks.length,
-          days_per_week: planConfig?.daysPerWeek || planData.weeks[0]?.days?.length || 3,
+          weeks_count: planJson.weeks.length,
+          days_per_week: planConfig?.daysPerWeek || planJson.weeks[0]?.days?.length || 3,
           plan_data: planJson,
           required_equipment: ['bodyweight'],
         })
@@ -206,7 +221,7 @@ const GeneratingPage = () => {
       const responseText = typeof data === 'string' ? data : (data?.reply || data?.response || data?.message || JSON.stringify(data));
       const planData = extractJSON(responseText);
 
-      if (!planData.weeks || !Array.isArray(planData.weeks)) {
+      if (!planData.weeks && !planData.week) {
         throw new Error('AI cavabında düzgün plan strukturu tapılmadı');
       }
 
@@ -218,7 +233,7 @@ const GeneratingPage = () => {
     } catch (err) {
       if (!aborted.current) {
         if (stepInterval.current) {
-          clearInterval(stepInterval.current);
+          clearTimeout(stepInterval.current);
           stepInterval.current = null;
         }
         setError(err.message || 'Proqram yaradılarkən xəta baş verdi.');
@@ -267,7 +282,7 @@ const GeneratingPage = () => {
     return () => {
       aborted.current = true;
       if (stepInterval.current) {
-        clearInterval(stepInterval.current);
+        clearTimeout(stepInterval.current);
         stepInterval.current = null;
       }
     };
