@@ -43,7 +43,7 @@ function buildPrompt(planConfig) {
 
   const planLabel = isHome ? 'Evdə Məşq' : 'Zalda Məşq';
 
-  return `Sən FitStart fitness proqram generatorusan. Aşağıdakı parametrlərə əsasən JSON formatında məşq proqramı yarat:
+  return `Sən FitStart fitness proqram generatorusan. Compact JSON formatında 4 həftəlik proqressiv məşq proqramı yarat.
 
 Plan növü: ${planLabel}
 Məqsəd: ${goalLabel}
@@ -51,12 +51,22 @@ Hədəf əzələlər: ${muscles}
 Həftədə: ${planConfig.daysPerWeek} gün
 ${equipmentNote}
 
-CAVABINI YALNIZ JSON formatında ver, heç bir əlavə mətn olmadan. JSON strukturu:
+QAYDALAR:
+- Hər həftə eyni günlər, lakin artan yük (sets/reps/çəki artımı ilə proqressiya)
+- Warmup və cooldown YAZMA — tətbiq özü əlavə edəcək
+- Hər gün üçün yalnız mainWorkout massivi lazımdır
+
+CAVABINI YALNIZ JSON formatında ver:
 {
   "name": "Plan adı",
-  "week": { "days": [{ "dayNumber": 1, "dayName": "Monday", "title": "Push Day", "warmup": { "duration": "5 min", "exercises": [{"name": "..."}] }, "mainWorkout": [{ "name": "...", "sets": 3, "reps": "12", "rest": "60 sec", "equipment": "barbell" }], "cooldown": { "duration": "5 min", "exercises": [{"name": "..."}] } }] }
+  "weeks": [
+    { "week": 1, "days": [{ "dayNumber": 1, "dayName": "Monday", "title": "Push Day", "mainWorkout": [{ "name": "Bench Press", "sets": 3, "reps": "10", "rest": "90s", "equipment": "barbell" }] }] },
+    { "week": 2, "days": [...] },
+    { "week": 3, "days": [...] },
+    { "week": 4, "days": [...] }
+  ]
 }
-YALNIZ 1 həftəlik şablon yarat (${planConfig.daysPerWeek} gün). Tətbiq onu 4 həftəyə özü çoxaldacaq. Hər gün üçün fərqli məşqlər seç.`;
+Hər həftə ${planConfig.daysPerWeek} gün olmalıdır. Həftələr arasında sets və ya reps artır.`;
 }
 
 function extractJSON(text) {
@@ -113,15 +123,26 @@ const GeneratingPage = () => {
     if (!user) { navigate('/login'); return; }
 
     try {
-      // Support both single-week format { week: {...} } and multi-week { weeks: [...] }
-      let weeksArray = planData.weeks;
-      if (!weeksArray && planData.week) {
-        // AI returned 1-week template — expand to 4 weeks
-        weeksArray = [1, 2, 3, 4].map(w => ({ week: w, days: planData.week.days }));
-      }
+      const weeksArray = planData.weeks;
       if (!weeksArray || !Array.isArray(weeksArray)) {
         throw new Error('AI cavabında düzgün plan strukturu tapılmadı');
       }
+
+      const DEFAULT_WARMUP = {
+        duration: '5 dəq',
+        exercises: [
+          { name: 'Yüngül cardio (atlamaq və ya yerində qaçmaq)' },
+          { name: 'Dinamik uzanma (qollar, ayaqlar)' },
+          { name: 'Eklem isitmə hərəkətləri' },
+        ],
+      };
+      const DEFAULT_COOLDOWN = {
+        duration: '5 dəq',
+        exercises: [
+          { name: 'Statik uzanma (hədəf əzələlər)' },
+          { name: 'Dərin nəfəs alıb-vermə' },
+        ],
+      };
 
       const planJson = {
         id: `custom-${Date.now()}`,
@@ -133,9 +154,9 @@ const GeneratingPage = () => {
             dayNumber: day.dayNumber,
             dayName: day.dayName,
             title: day.title,
-            warmup: day.warmup,
+            warmup: day.warmup || DEFAULT_WARMUP,
             mainWorkout: day.mainWorkout,
-            cooldown: day.cooldown,
+            cooldown: day.cooldown || DEFAULT_COOLDOWN,
           })),
         })),
       };
