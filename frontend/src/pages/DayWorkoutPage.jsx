@@ -232,7 +232,7 @@ const DayWorkoutPage = () => {
 
   if (!dayData) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+      <div className="h-screen overflow-hidden bg-[#0f0f0f] flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Workout Not Found</h1>
           <Button onClick={() => navigate(`/program/${id}`)} className="bg-green-600 hover:bg-green-700">

@@ -405,7 +405,7 @@ const DashboardPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+      <div className="h-screen overflow-hidden bg-[#0f0f0f] flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full" />
       </div>
     );
