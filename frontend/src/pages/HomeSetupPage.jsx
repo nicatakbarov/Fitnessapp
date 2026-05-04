@@ -103,7 +103,7 @@ const HomeSetupPage = () => {
         </div>
       </nav>
 
-      <main className="pt-24 pb-16 px-4 md:px-6">
+      <main className="pt-28 pb-16 px-4 md:px-6">
         <div className="max-w-2xl mx-auto">
 
               <div>

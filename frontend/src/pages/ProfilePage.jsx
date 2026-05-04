@@ -325,7 +325,7 @@ const ProfilePage = () => {
         </div>
       </nav>
 
-      <main style={{ maxWidth: 480, margin: '0 auto', padding: '80px 16px 120px' }}>
+      <main style={{ maxWidth: 480, margin: '0 auto', padding: '112px 16px 120px' }}>
 
         {/* Avatar + name + email */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>

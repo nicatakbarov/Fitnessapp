@@ -330,7 +330,7 @@ const DayWorkoutPage = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="pt-24 pb-32 px-6">
+      <main className="pt-28 pb-32 px-6">
         <div className="max-w-3xl mx-auto">
           {/* Back Button */}
           <Button

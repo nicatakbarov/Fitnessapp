@@ -98,7 +98,7 @@ const CreateCustomPlanPage = () => {
         </div>
       </nav>
 
-      <main className="pt-24 pb-32 px-6 flex-1">
+      <main className="pt-28 pb-32 px-6 flex-1">
         <div className="max-w-3xl mx-auto">
           {/* Step 1: Goal */}
           {currentStep === 1 && (

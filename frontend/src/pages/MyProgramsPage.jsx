@@ -245,7 +245,7 @@ const MyProgramsPage = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="pt-24 pb-24 px-6">
+      <main className="pt-28 pb-24 px-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-12">

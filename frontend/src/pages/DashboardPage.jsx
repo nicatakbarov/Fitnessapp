@@ -421,7 +421,7 @@ const DashboardPage = () => {
       {isOffline && <OfflineBanner />}
       <DashboardNav user={user} onLogout={handleLogout} activePage="dashboard" />
 
-      <main className="pt-24 pb-24 px-4 md:px-6">
+      <main className="pt-28 pb-24 px-4 md:px-6">
         <div className="max-w-6xl mx-auto space-y-8">
 
           {/* Header */}
