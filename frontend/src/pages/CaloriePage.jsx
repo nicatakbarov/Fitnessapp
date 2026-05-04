@@ -4,6 +4,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Flame, Plus, Trash2, X, ChevronLeft, Bot } from 'lucide-react';
 import { supabase, getStoredUser } from '../lib/supabase';
 import BottomNav from '../components/BottomNav';
+import DashboardNav from '../components/DashboardNav';
 
 const CALORIE_GOAL = 2000;
 
@@ -188,22 +189,28 @@ export default function CaloriePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0f0f0f', color: 'white', paddingBottom: '90px' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top, 44px) + 16px) 20px 16px' }}>
-        <div>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }}>{todayLabel}</p>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px' }}>Qida İzləyici</h1>
-        </div>
-        <button
-          onClick={() => navigate('/nutrition')}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.12)',
-            border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '8px 14px',
-            color: '#4ade80', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-          <Bot size={14} /> AI Məsləhət
-        </button>
-      </div>
+      <DashboardNav
+        user={user}
+        onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/'); }}
+        activePage="nutrition"
+      />
 
-      <div style={{ padding: '0 20px' }}>
+      <div style={{ padding: '112px 20px 0' }}>
+
+        {/* Page title + AI button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }}>{todayLabel}</p>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px' }}>Qida İzləyici</h1>
+          </div>
+          <button
+            onClick={() => navigate('/nutrition')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.12)',
+              border: '1px solid rgba(34,197,94,0.25)', borderRadius: '20px', padding: '8px 14px',
+              color: '#4ade80', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+            <Bot size={14} /> AI Məsləhət
+          </button>
+        </div>
 
         {/* ── Calorie Ring ─────────────────────────────────────────── */}
         <div style={{ background: '#1a1a1a', borderRadius: '20px', padding: '20px', marginBottom: '16px',

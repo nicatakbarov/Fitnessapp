@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import BottomNav from '../components/BottomNav';
+import DashboardNav from '../components/DashboardNav';
 import { useNavigate, Link } from 'react-router-dom';
-import { Dumbbell, LogOut, User, Play, ShoppingBag, ArrowRight, CheckCircle2, Circle, Lock } from 'lucide-react';
+import { Play, ShoppingBag, ArrowRight, CheckCircle2, Circle, Lock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import OfflineBanner from '../components/OfflineBanner';
@@ -211,38 +212,7 @@ const MyProgramsPage = () => {
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="my-programs-page">
       {isOffline && <OfflineBanner />}
-      {/* Navbar */}
-      <nav className="safe-nav fixed top-0 left-0 right-0 z-50 glass">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2 text-white hover:text-green-500 transition-colors">
-            <Dumbbell className="w-8 h-8 text-green-500" />
-            <span className="font-heading text-2xl font-bold tracking-tight">FitStart</span>
-          </Link>
-          
-          <div className="hidden md:flex items-center gap-6">
-            <Link to="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white">Dashboard</Link>
-            <Link to="/my-programs" className="text-sm font-medium text-green-400">My Programs</Link>
-            <Link to="/progress" className="text-sm font-medium text-zinc-400 hover:text-white">Progress</Link>
-            <Link to="/nutrition" className="text-sm font-medium text-zinc-400 hover:text-white">Nutrition</Link>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-zinc-400">
-              <User className="w-5 h-5" />
-              <span className="hidden sm:inline">{user.name}</span>
-            </div>
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              data-testid="logout-btn"
-              className="text-zinc-400 hover:text-white hover:bg-zinc-800"
-            >
-              <LogOut className="w-5 h-5 mr-2" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <DashboardNav user={user} onLogout={handleLogout} activePage="my-programs" />
 
       {/* Main Content */}
       <main className="pt-28 pb-24 px-6">
