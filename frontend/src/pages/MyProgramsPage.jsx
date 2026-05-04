@@ -4,11 +4,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, Play, ShoppingBag, ArrowRight, CheckCircle2, Circle, Lock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
+import OfflineBanner from '../components/OfflineBanner';
+import useOffline from '../hooks/useOffline';
 import { supabase } from '../lib/supabase';
+import {
+  cachePurchases, getCachedPurchases,
+  cacheProgress, getCachedProgress,
+  cacheCustomPlan, getCachedCustomPlan,
+} from '../lib/offlineCache';
 import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS } from '../data/programs';
 
 const MyProgramsPage = () => {
   const navigate = useNavigate();
+  const isOffline = useOffline();
   const [user, setUser] = useState(null);
   const [purchases, setPurchases] = useState([]);
   const [progress, setProgress] = useState({});
@@ -32,59 +40,88 @@ const MyProgramsPage = () => {
   }, [navigate]);
 
   const fetchData = async (userId) => {
-    try {
-      const { data: purchasesData } = await supabase
-        .from('purchases')
-        .select('*')
-        .eq('user_id', userId);
-      setPurchases(purchasesData || []);
-
-      const progressData = {};
-      const customPlansData = {};
-
-      for (const purchase of (purchasesData || [])) {
-        const { data: prog } = await supabase
-          .from('progress')
+    // --- Try network ---
+    if (navigator.onLine) {
+      try {
+        const { data: purchasesData, error: pErr } = await supabase
+          .from('purchases')
           .select('*')
-          .eq('user_id', userId)
-          .eq('program_id', purchase.program_id);
-        progressData[purchase.program_id] = prog || [];
+          .eq('user_id', userId);
 
-        // Fetch custom plan data if program_id starts with 'custom-'
-        if (purchase.program_id.startsWith('custom-')) {
-          const customPlanId = purchase.program_id.replace('custom-', '');
-          const { data: customPlan } = await supabase
-            .from('custom_plans')
+        if (pErr) throw pErr;
+
+        const purchases = purchasesData || [];
+        setPurchases(purchases);
+        cachePurchases(userId, purchases);
+
+        const progressData = {};
+        const customPlansData = {};
+
+        for (const purchase of purchases) {
+          const { data: prog } = await supabase
+            .from('progress')
             .select('*')
-            .eq('id', customPlanId)
-            .single();
+            .eq('user_id', userId)
+            .eq('program_id', purchase.program_id);
+          const rows = prog || [];
+          progressData[purchase.program_id] = rows;
+          cacheProgress(userId, purchase.program_id, rows);
 
-          if (customPlan && customPlan.plan_data) {
-            try {
-              const planData = typeof customPlan.plan_data === 'string'
-                ? JSON.parse(customPlan.plan_data)
-                : customPlan.plan_data;
-              customPlansData[purchase.program_id] = {
-                ...planData,
-                created_at: customPlan.created_at
-              };
-            } catch (e) {
-              console.error('Failed to parse custom plan data:', e);
+          if (purchase.program_id.startsWith('custom-')) {
+            const customPlanId = purchase.program_id.replace('custom-', '');
+            const { data: customPlan } = await supabase
+              .from('custom_plans')
+              .select('*')
+              .eq('id', customPlanId)
+              .single();
+
+            if (customPlan?.plan_data) {
+              try {
+                const planData = typeof customPlan.plan_data === 'string'
+                  ? JSON.parse(customPlan.plan_data)
+                  : customPlan.plan_data;
+                const full = { ...planData, created_at: customPlan.created_at };
+                customPlansData[purchase.program_id] = full;
+                cacheCustomPlan(purchase.program_id, full);
+              } catch (e) {
+                console.error('Failed to parse custom plan data:', e);
+              }
             }
           }
         }
-      }
 
-      setProgress(progressData);
-      // Store custom plans in sessionStorage for WORKOUT_MAP access
-      if (Object.keys(customPlansData).length > 0) {
-        sessionStorage.setItem('customPlans', JSON.stringify(customPlansData));
+        setProgress(progressData);
+        if (Object.keys(customPlansData).length > 0) {
+          sessionStorage.setItem('customPlans', JSON.stringify(customPlansData));
+        }
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.warn('Network fetch failed, falling back to cache:', err);
       }
-    } catch (err) {
-      console.error('Failed to fetch data:', err);
-    } finally {
-      setLoading(false);
     }
+
+    // --- Offline / network error: load from cache ---
+    const cachedPurchases = getCachedPurchases(userId) || [];
+    setPurchases(cachedPurchases);
+
+    const progressData = {};
+    const customPlansData = {};
+
+    for (const purchase of cachedPurchases) {
+      progressData[purchase.program_id] = getCachedProgress(userId, purchase.program_id) || [];
+
+      if (purchase.program_id.startsWith('custom-')) {
+        const plan = getCachedCustomPlan(purchase.program_id);
+        if (plan) customPlansData[purchase.program_id] = plan;
+      }
+    }
+
+    setProgress(progressData);
+    if (Object.keys(customPlansData).length > 0) {
+      sessionStorage.setItem('customPlans', JSON.stringify(customPlansData));
+    }
+    setLoading(false);
   };
 
   const handleLogout = () => {
@@ -173,6 +210,7 @@ const MyProgramsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="my-programs-page">
+      {isOffline && <OfflineBanner />}
       {/* Navbar */}
       <nav className="safe-nav fixed top-0 left-0 right-0 z-50 glass">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">

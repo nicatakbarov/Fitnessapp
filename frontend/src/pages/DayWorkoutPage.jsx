@@ -2,13 +2,20 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Dumbbell, LogOut, User, ArrowLeft, CheckCircle2, Clock, Flame, Info, PartyPopper, PlayCircle, ChevronUp, Heart } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import OfflineBanner from '../components/OfflineBanner';
+import useOffline from '../hooks/useOffline';
 import { supabase, getStoredUser } from '../lib/supabase';
 import { getWorkoutCaloriesAndHR } from '../lib/healthkit';
+import {
+  cacheProgress, getCachedProgress, getCachedCustomPlan,
+  enqueueOfflineAction,
+} from '../lib/offlineCache';
 import { FREE_STARTER_WORKOUTS, STARTER_WORKOUTS, TRANSFORMER_WORKOUTS, ELITE_WORKOUTS, HOME_BEGINNER_WORKOUTS, TWO_DAY_WORKOUTS } from '../data/programs';
 import { getExerciseGif } from '../lib/getExerciseGif';
 
 const DayWorkoutPage = () => {
   const navigate = useNavigate();
+  const isOffline = useOffline();
   const { id, dayId } = useParams();
   const [user, setUser] = useState(null);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -27,29 +34,42 @@ const DayWorkoutPage = () => {
   };
 
   const fetchProgress = useCallback(async (userId) => {
-    try {
-      const { data } = await supabase
-        .from('progress')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('program_id', id);
-      setProgress(data || []);
-      const completed = (data || []).some(p => p.day_id === dayId && p.completed);
-      setIsCompleted(completed);
-      if (completed) {
-        // Load previously saved weights and mark all exercises as checked
-        const lsKey = `weights_${userId}_${id}_${dayId}`;
-        const all = JSON.parse(localStorage.getItem('workout_weights') || '{}');
-        const saved = all[lsKey];
-        if (saved?.weights) {
-          setWeights(saved.weights);
-          const allChecked = {};
-          Object.keys(saved.weights).forEach(k => { allChecked[k] = true; });
-          setChecked(allChecked);
+    let rows = null;
+
+    if (navigator.onLine) {
+      try {
+        const { data, error } = await supabase
+          .from('progress')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('program_id', id);
+        if (!error) {
+          rows = data || [];
+          cacheProgress(userId, id, rows);
         }
+      } catch (err) {
+        console.warn('fetchProgress network error, using cache:', err);
       }
-    } catch (err) {
-      console.error('Failed to fetch progress:', err);
+    }
+
+    // Fallback to cache
+    if (rows === null) {
+      rows = getCachedProgress(userId, id) || [];
+    }
+
+    setProgress(rows);
+    const completed = rows.some(p => p.day_id === dayId && p.completed);
+    setIsCompleted(completed);
+    if (completed) {
+      const lsKey = `weights_${userId}_${id}_${dayId}`;
+      const all = JSON.parse(localStorage.getItem('workout_weights') || '{}');
+      const saved = all[lsKey];
+      if (saved?.weights) {
+        setWeights(saved.weights);
+        const allChecked = {};
+        Object.keys(saved.weights).forEach(k => { allChecked[k] = true; });
+        setChecked(allChecked);
+      }
     }
   }, [id, dayId]);
 
@@ -61,21 +81,28 @@ const DayWorkoutPage = () => {
       fetchProgress(parsedUser.id);
 
       if (id.startsWith('custom-')) {
-        const cached = sessionStorage.getItem('customPlans');
-        if (cached) {
-          const plans = JSON.parse(cached);
+        // 1. sessionStorage (fast, in-session cache)
+        const cachedSession = sessionStorage.getItem('customPlans');
+        if (cachedSession) {
+          const plans = JSON.parse(cachedSession);
           if (plans[id]) { setCustomPlan(plans[id]); return; }
         }
-        const planId = id.replace('custom-', '');
-        supabase.from('custom_plans').select('*').eq('id', planId).single().then(({ data }) => {
-          if (data?.plan_data) {
-            const plan = typeof data.plan_data === 'string' ? JSON.parse(data.plan_data) : data.plan_data;
-            const full = { ...plan, id };
-            setCustomPlan(full);
-            const existing = cached ? JSON.parse(cached) : {};
-            sessionStorage.setItem('customPlans', JSON.stringify({ ...existing, [id]: full }));
-          }
-        });
+        // 2. localStorage offline cache
+        const lsCached = getCachedCustomPlan(id);
+        if (lsCached) { setCustomPlan(lsCached); return; }
+        // 3. Network fetch
+        if (navigator.onLine) {
+          const planId = id.replace('custom-', '');
+          supabase.from('custom_plans').select('*').eq('id', planId).single().then(({ data }) => {
+            if (data?.plan_data) {
+              const plan = typeof data.plan_data === 'string' ? JSON.parse(data.plan_data) : data.plan_data;
+              const full = { ...plan, id };
+              setCustomPlan(full);
+              const existing = cachedSession ? JSON.parse(cachedSession) : {};
+              sessionStorage.setItem('customPlans', JSON.stringify({ ...existing, [id]: full }));
+            }
+          });
+        }
       }
     } catch {
       navigate('/login');
@@ -92,20 +119,44 @@ const DayWorkoutPage = () => {
     setLoading(true);
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
-      // Save weights to localStorage for progress tracking
+      const completedAt = new Date().toISOString();
+
+      // Always save weights to localStorage immediately
       if (Object.keys(weights).length > 0) {
-        const key = `weights_${userData.id}_${id}_${dayId}`;
+        const lsKey = `weights_${userData.id}_${id}_${dayId}`;
         const existing = JSON.parse(localStorage.getItem('workout_weights') || '{}');
-        existing[key] = { weights, completedAt: new Date().toISOString() };
+        existing[lsKey] = { weights, completedAt };
         localStorage.setItem('workout_weights', JSON.stringify(existing));
       }
-      await supabase.from('progress').upsert({
+
+      const payload = {
         user_id: userData.id,
         program_id: id,
         day_id: dayId,
         completed: true,
-        completed_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,program_id,day_id' });
+        completed_at: completedAt,
+      };
+
+      if (!navigator.onLine) {
+        // Queue for later sync
+        enqueueOfflineAction({ type: 'mark_complete', payload });
+        // Update local cache so UI reflects completion immediately
+        const cached = getCachedProgress(userData.id, id) || [];
+        const updated = [
+          ...cached.filter(p => !(p.program_id === id && p.day_id === dayId)),
+          payload,
+        ];
+        cacheProgress(userData.id, id, updated);
+        setProgress(updated);
+        setIsCompleted(true);
+        setWorkoutHealth({ calories: null, avgHeartRate: null });
+        setShowCongrats(true);
+        return;
+      }
+
+      await supabase.from('progress').upsert(payload, {
+        onConflict: 'user_id,program_id,day_id',
+      });
       setIsCompleted(true);
       const healthStats = await getWorkoutCaloriesAndHR(workoutStartRef.current);
       setWorkoutHealth(healthStats);
@@ -194,6 +245,7 @@ const DayWorkoutPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="day-workout-page">
+      {isOffline && <OfflineBanner />}
       {/* Congratulations Modal */}
       {showCongrats && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" data-testid="congrats-modal">

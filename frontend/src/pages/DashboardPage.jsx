@@ -13,11 +13,20 @@ import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import ProgramSelectorModal from '../components/ProgramSelectorModal';
 import DashboardNav from '../components/DashboardNav';
+import OfflineBanner from '../components/OfflineBanner';
+import useOffline from '../hooks/useOffline';
 import { supabase } from '../lib/supabase';
+import {
+  cachePurchases, getCachedPurchases,
+  cacheProgress, getCachedProgress,
+  cacheCustomPlan, getCachedCustomPlan,
+  getOfflineQueue, clearOfflineQueue,
+} from '../lib/offlineCache';
 import { FREE_STARTER_WORKOUTS, HOME_BEGINNER_WORKOUTS, STARTER_WORKOUTS, TWO_DAY_WORKOUTS, ELITE_WORKOUTS, TRANSFORMER_WORKOUTS } from '../data/programs';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const isOffline = useOffline();
   const [user, setUser] = useState(null);
   const [purchases, setPurchases] = useState([]);
   const [progress, setProgress] = useState({});
@@ -69,46 +78,97 @@ const DashboardPage = () => {
     setHealthData({ steps, calories, heartRate, sleepHours: lastNight });
   };
 
-  const fetchData = async (userId) => {
+  // Flush offline queue (completed workouts saved while offline)
+  const flushOfflineQueue = async () => {
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
     try {
-      const { data: purchasesData } = await supabase
-        .from('purchases')
-        .select('*')
-        .eq('user_id', userId)
-        .order('purchased_at', { ascending: false });
-      setPurchases(purchasesData || []);
-
-      const progressData = {};
-      for (const purchase of (purchasesData || [])) {
-        const { data: prog } = await supabase
-          .from('progress')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('program_id', purchase.program_id);
-        progressData[purchase.program_id] = prog || [];
-      }
-      setProgress(progressData);
-
-      // Load custom plan data for the first (active) program
-      const activePurchase = (purchasesData || [])[0];
-      if (activePurchase?.program_id?.startsWith('custom-')) {
-        const cached = sessionStorage.getItem('customPlans');
-        if (cached) {
-          const plans = JSON.parse(cached);
-          if (plans[activePurchase.program_id]) {
-            setCustomPlanData(plans[activePurchase.program_id]);
-          } else {
-            await loadCustomPlan(activePurchase.program_id, plans);
-          }
-        } else {
-          await loadCustomPlan(activePurchase.program_id, {});
+      for (const action of queue) {
+        if (action.type === 'mark_complete') {
+          await supabase.from('progress').upsert(action.payload, {
+            onConflict: 'user_id,program_id,day_id',
+          });
         }
       }
+      clearOfflineQueue();
     } catch (err) {
-      console.error('Failed to fetch data:', err);
-    } finally {
-      setLoading(false);
+      console.warn('Queue flush failed (still offline?):', err);
     }
+  };
+
+  const fetchData = async (userId) => {
+    // --- Try network ---
+    if (navigator.onLine) {
+      try {
+        await flushOfflineQueue();
+
+        const { data: purchasesData, error: pErr } = await supabase
+          .from('purchases')
+          .select('*')
+          .eq('user_id', userId)
+          .order('purchased_at', { ascending: false });
+
+        if (pErr) throw pErr;
+
+        const purchases = purchasesData || [];
+        setPurchases(purchases);
+        cachePurchases(userId, purchases);
+
+        const progressData = {};
+        for (const purchase of purchases) {
+          const { data: prog } = await supabase
+            .from('progress')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('program_id', purchase.program_id);
+          const rows = prog || [];
+          progressData[purchase.program_id] = rows;
+          cacheProgress(userId, purchase.program_id, rows);
+        }
+        setProgress(progressData);
+
+        // Load custom plan data for the first (active) program
+        const activePurchase = purchases[0];
+        if (activePurchase?.program_id?.startsWith('custom-')) {
+          const cached = sessionStorage.getItem('customPlans');
+          if (cached) {
+            const plans = JSON.parse(cached);
+            if (plans[activePurchase.program_id]) {
+              setCustomPlanData(plans[activePurchase.program_id]);
+            } else {
+              await loadCustomPlan(activePurchase.program_id, plans);
+            }
+          } else {
+            await loadCustomPlan(activePurchase.program_id, {});
+          }
+        }
+
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.warn('Network fetch failed, falling back to cache:', err);
+      }
+    }
+
+    // --- Offline / network error: load from cache ---
+    const cachedPurchases = getCachedPurchases(userId) || [];
+    setPurchases(cachedPurchases);
+
+    const progressData = {};
+    for (const purchase of cachedPurchases) {
+      const cached = getCachedProgress(userId, purchase.program_id) || [];
+      progressData[purchase.program_id] = cached;
+    }
+    setProgress(progressData);
+
+    // Custom plan from localStorage cache
+    const activePurchase = cachedPurchases[0];
+    if (activePurchase?.program_id?.startsWith('custom-')) {
+      const plan = getCachedCustomPlan(activePurchase.program_id);
+      if (plan) setCustomPlanData(plan);
+    }
+
+    setLoading(false);
   };
 
   const loadCustomPlan = async (programId, existingPlans) => {
@@ -128,6 +188,8 @@ const DashboardPage = () => {
         ...existingPlans,
         [programId]: fullPlan,
       }));
+      // Also persist to localStorage for offline access
+      cacheCustomPlan(programId, fullPlan);
     }
   };
 
@@ -356,6 +418,7 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]" data-testid="dashboard-page">
+      {isOffline && <OfflineBanner />}
       <DashboardNav user={user} onLogout={handleLogout} activePage="dashboard" />
 
       <main className="pt-24 pb-24 px-4 md:px-6">
