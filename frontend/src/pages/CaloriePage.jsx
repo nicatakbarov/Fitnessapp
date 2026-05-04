@@ -189,7 +189,7 @@ export default function CaloriePage() {
     <div style={{ minHeight: '100vh', background: '#0f0f0f', color: 'white', paddingBottom: '90px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '56px 20px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top, 44px) + 16px) 20px 16px' }}>
         <div>
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }}>{todayLabel}</p>
           <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px' }}>Qida İzləyici</h1>
