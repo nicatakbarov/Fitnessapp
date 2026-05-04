@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Flame, Plus, Trash2, X, ChevronLeft, Bot } from 'lucide-react';
 import { supabase, getStoredUser } from '../lib/supabase';
+import BottomNav from '../components/BottomNav';
 
 const CALORIE_GOAL = 2000;
 
@@ -473,6 +474,8 @@ export default function CaloriePage() {
           </div>
         </div>
       )}
+
+      <BottomNav />
     </div>
   );
 }
